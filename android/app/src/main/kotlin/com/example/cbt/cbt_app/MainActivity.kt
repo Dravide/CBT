@@ -1,0 +1,21 @@
+package com.example.cbt.cbt_app
+
+import android.os.Bundle
+import android.view.WindowManager
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity: FlutterActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            startLockTask()
+        } catch (e: Exception) {
+            // Handle exception if pinning is not supported or allowed
+        }
+    }
+}
