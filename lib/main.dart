@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:cbt_app/splash_screen.dart';
 
 void main() {
@@ -17,13 +18,22 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static const Color primaryColor = Color.fromRGBO(18, 26, 28, 1);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CBT App',
+      debugShowCheckedModeBanner: false,
+      title: 'SCIPSA CBT',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        primaryColor: primaryColor,
+        scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
+        textTheme: GoogleFonts.openSansTextTheme(),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryColor,
+          brightness: Brightness.light,
+        ),
       ),
       home: const SplashScreen(),
     );
