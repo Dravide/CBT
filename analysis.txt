@@ -1,0 +1,33 @@
+Analyzing CBT...                                                
+
+   info - Don't invoke 'print' in production code - lib\app_control.dart:20:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\app_control.dart:29:7 - avoid_print
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\assessment_menu.dart:4:8 - unnecessary_import
+   info - The private field _currentIndex could be 'final' - lib\assessment_menu.dart:23:7 - prefer_final_fields
+warning - Unused import: 'package:cbt_app/pages/guru_list_page.dart' - lib\home_page.dart:6:8 - unused_import
+  error - The named parameter 'children' isn't defined - lib\home_page.dart:587:9 - undefined_named_parameter
+  error - Expected to find ';' - lib\home_page.dart:609:7 - expected_token
+warning - Dead code - lib\home_page.dart:609:8 - dead_code
+  error - Expected an identifier - lib\home_page.dart:609:8 - missing_identifier
+  error - Expected to find ';' - lib\home_page.dart:609:8 - expected_token
+  error - Unexpected text ';' - lib\home_page.dart:609:8 - unexpected_token
+  error - Expected an identifier - lib\home_page.dart:610:5 - missing_identifier
+  error - Unexpected text ';' - lib\home_page.dart:610:5 - unexpected_token
+   info - Unnecessary empty statement - lib\home_page.dart:610:6 - empty_statements
+   info - Don't invoke 'print' in production code - lib\main.dart:12:3 - avoid_print
+   info - Don't invoke 'print' in production code - lib\main.dart:41:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\main.dart:45:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\main.dart:48:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\main.dart:50:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\main.dart:55:5 - avoid_print
+   info - The private field _gurus could be 'final' - lib\pages\guru_list_page.dart:19:14 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\pages\guru_list_page.dart:82:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\pages\pelanggaran_form_page.dart:66:28 - use_build_context_synchronously
+   info - The private field _siswas could be 'final' - lib\pages\siswa_list_page.dart:19:15 - prefer_final_fields
+   info - Don't use 'BuildContext's across async gaps - lib\pages\siswa_list_page.dart:98:28 - use_build_context_synchronously
+warning - Unused import: 'package:cbt_app/assessment_menu.dart' - lib\qr_scanner.dart:4:8 - unused_import
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\qr_scanner.dart:6:8 - unnecessary_import
+warning - The declaration '_showExitDialog' isn't referenced - lib\qr_scanner.dart:45:16 - unused_element
+   info - The import of 'package:flutter/services.dart' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\webview_page.dart:5:8 - unnecessary_import
+
+29 issues found. (ran in 9.7s)

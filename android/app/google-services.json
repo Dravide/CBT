@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "813051919580",
+    "project_id": "notifikasi-93275",
+    "storage_bucket": "notifikasi-93275.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813051919580:android:e572baf501a1c09583c819",
+        "android_client_info": {
+          "package_name": "com.scipsa.cbt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRc53Ni1s-GaxPt8CWmATprhgZELsk7Pk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

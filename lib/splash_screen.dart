@@ -42,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromRGBO(18, 26, 28, 1), // Dark theme from repair_service_ui
+      backgroundColor: const Color(0xFF0D47A1), // Primary Blue to match App
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -71,20 +71,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               ),
               const SizedBox(height: 32),
               Text(
-                'SCIPSA CBT',
-                style: GoogleFonts.openSans(
-                  fontSize: 28,
+                'SATRIA',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 32, // Slightly larger
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  letterSpacing: 2,
+                  letterSpacing: 4, // Wider spacing
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Computer Based Test',
-                style: GoogleFonts.openSans(
-                  fontSize: 14,
-                  color: Colors.white70,
+                'Sistem Aplikasi Terpadu & Interaktif Siswa',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.9),
                   letterSpacing: 1,
                 ),
               ),

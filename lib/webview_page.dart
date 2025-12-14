@@ -189,7 +189,7 @@ class _WebViewPageState extends State<WebViewPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Keluar Ujian',
-            style: GoogleFonts.openSans(
+            style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.bold,
               color: _primaryColor,
             ),

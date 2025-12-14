@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cbt_app/assessment_menu.dart';
 import 'package:cbt_app/webview_page.dart';
 import 'package:flutter/services.dart';
 import 'package:cbt_app/app_control.dart';
+import 'package:cbt_app/pages/pengumuman_list_page.dart';
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -26,6 +28,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
       if (barcode.rawValue != null) {
         final String code = barcode.rawValue!;
         if (code == _validQrCode) {
+          // Enable secure mode (block screenshots)
+          AppControl.setSecure(true);
           setState(() {
             _isScanning = false;
           });
@@ -51,7 +55,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Exit App',
-            style: GoogleFonts.openSans(
+            style: GoogleFonts.plusJakartaSans(
               fontWeight: FontWeight.bold,
               color: _primaryColor,
             ),
@@ -60,7 +64,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
             controller: controller,
             decoration: InputDecoration(
               hintText: 'Enter PIN',
-              hintStyle: GoogleFonts.openSans(color: Colors.grey),
+              hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey),
               filled: true,
               fillColor: _greyColor,
               border: OutlineInputBorder(
@@ -70,19 +74,21 @@ class _QRScannerPageState extends State<QRScannerPage> {
             ),
             obscureText: true,
             keyboardType: TextInputType.number,
-            style: GoogleFonts.openSans(),
+            style: GoogleFonts.plusJakartaSans(),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.openSans(color: Colors.grey),
+                style: GoogleFonts.plusJakartaSans(color: Colors.grey),
               ),
             ),
             ElevatedButton(
               onPressed: () {
                 if (controller.text == '1234') {
+                  // Make sure to disable secure mode if we are exiting from here (just in case)
+                  AppControl.setSecure(false);
                   AppControl.exitApp();
                 } else {
                   Navigator.pop(context);
@@ -96,7 +102,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               ),
               child: Text(
                 'Exit',
-                style: GoogleFonts.openSans(color: Colors.white),
+                style: GoogleFonts.plusJakartaSans(color: Colors.white),
               ),
             ),
           ],
@@ -116,9 +122,24 @@ class _QRScannerPageState extends State<QRScannerPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PengumumanListPage()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app, color: Colors.white),
+            onPressed: _showExitDialog,
+          ),
+        ],
         title: Text(
           'Scan QR Code',
-          style: GoogleFonts.openSans(
+          style: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
@@ -145,7 +166,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 const SizedBox(height: 12),
                 Text(
                   'SCIPSA CBT',
-                  style: GoogleFonts.openSans(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: _primaryColor,
@@ -154,7 +175,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 const SizedBox(height: 4),
                 Text(
                   'Arahkan kamera ke QR Code ujian',
-                  style: GoogleFonts.openSans(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     color: Colors.grey,
                   ),
@@ -183,7 +204,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
             child: Text(
               'Pastikan QR Code terlihat jelas di dalam bingkai',
               textAlign: TextAlign.center,
-              style: GoogleFonts.openSans(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 color: Colors.white54,
               ),
