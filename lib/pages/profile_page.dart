@@ -7,6 +7,9 @@ import 'package:cbt_app/services/siswa_service.dart';
 import 'package:cbt_app/models/siswa.dart';
 import 'package:cbt_app/pages/settings_page.dart';
 import 'package:cbt_app/pages/about_page.dart';
+import 'package:cbt_app/models/social_post.dart';
+import 'package:cbt_app/widgets/skeleton_loading.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback? onBack;
@@ -17,53 +20,71 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   final SiswaService _siswaService = SiswaService();
   bool _isLoading = true;
   Siswa? _siswa;
   String? _errorMessage;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadProfile();
   }
 
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadProfile() async {
+    // Artificial delay to ensure skeleton is visible
+    await Future.delayed(const Duration(seconds: 2));
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? nis = prefs.getString('user_nis');
 
       if (nis == null) {
-        setState(() {
-          _errorMessage = 'Data sesi tidak ditemukan. Silakan login ulang.';
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Data sesi tidak ditemukan. Silakan login ulang.';
+            _isLoading = false;
+          });
+        }
         return;
       }
 
-      // Fetch fresh data
       final result = await _siswaService.fetchSiswas(query: nis);
       final List<Siswa> siswas = result['data'];
       
       try {
          final Siswa match = siswas.firstWhere((s) => s.nis == nis);
-         setState(() {
-           _siswa = match;
-           _isLoading = false;
-         });
+         if (mounted) {
+           setState(() {
+             _siswa = match;
+             _isLoading = false;
+           });
+         }
       } catch (e) {
-        setState(() {
-          _errorMessage = 'Data siswa tidak ditemukan di server.';
-          _isLoading = false;
-        });
+         if (mounted) {
+           setState(() {
+            _errorMessage = 'Data siswa tidak ditemukan di server.';
+            _isLoading = false;
+           });
+         }
       }
       
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Gagal memuat profil: $e';
-        _isLoading = false;
-      });
+       if (mounted) {
+         setState(() {
+          _errorMessage = 'Gagal memuat profil: $e';
+          _isLoading = false;
+         });
+       }
     }
   }
 
@@ -82,7 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () async {
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
-              await prefs.clear(); // Clear all data
+              await prefs.clear();
               
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
@@ -101,6 +122,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Filter my posts
+    final myPosts = SocialPost.dummyPosts.where((p) => p.userName == 'Siswa (Saya)' || p.userHandle == '@siswa_satria').toList();
+
     return Column(
       children: [
         CustomPageHeader(
@@ -110,141 +134,319 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         Expanded(
           child: _isLoading 
-            ? const Center(child: CircularProgressIndicator()) 
-            : _buildContent(),
+            ? _buildSkeleton()
+            : _buildContent(myPosts),
         ),
       ],
     );
   }
 
-  Widget _buildContent() {
-    if (_errorMessage != null) {
-      return Center(
+  Widget _buildSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_errorMessage!, style: GoogleFonts.plusJakartaSans(color: Colors.red), textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _logout,
-              child: const Text('Logout'),
-            )
+            // Header Skeleton
+            Row(
+              children: [
+                const SkeletonLoading(width: 80, height: 80, borderRadius: 40),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      SkeletonLoading(width: 150, height: 20),
+                      SizedBox(height: 8),
+                      SkeletonLoading(width: 100, height: 14),
+                      SizedBox(height: 8),
+                      SkeletonLoading(width: 180, height: 14),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            // Stats Skeleton
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: const [
+                 SkeletonLoading(width: 60, height: 40),
+                 SkeletonLoading(width: 60, height: 40),
+                 SkeletonLoading(width: 60, height: 40),
+              ],
+            ),
+            const SizedBox(height: 32),
+            // Buttons
+            Row(
+              children: const [
+                Expanded(child: SkeletonLoading(width: double.infinity, height: 40)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonLoading(width: double.infinity, height: 40)),
+              ],
+            ),
+            const SizedBox(height: 32),
+            // Content Skeleton
+            Column(
+               children: List.generate(3, (index) => Padding(
+                 padding: const EdgeInsets.only(bottom: 16),
+                 child: const SkeletonLoading(width: double.infinity, height: 100),
+               )),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildContent(List<SocialPost> myPosts) {
+     if (_errorMessage != null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_errorMessage!, style: GoogleFonts.plusJakartaSans(color: Colors.red), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _logout,
+                child: const Text('Logout'),
+              )
+            ],
+          ),
+        );
+     }
+     
+     return NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        // Avatar & Basic Info
+                        Row(
+                          children: [
+                            Container(
+                              width: 80, height: 80,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.grey[300]!),
+                                image: const DecorationImage(
+                                   // Placeholder for avatar image
+                                   image: AssetImage('assets/avatar_placeholder.png'), 
+                                   fit: BoxFit.cover, 
+                                ),
+                              ),
+                              child: const Center(
+                                  child: Icon(Icons.person, size: 40, color: Colors.grey),
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(child: _buildProfileDetails()),
+                          ],
+                        ),
+                        // Stats & Buttons
+                        const SizedBox(height: 24),
+                        _buildStatsRow(myPosts), 
+                        const SizedBox(height: 24),
+                        _buildActionButtons(),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPersistentHeader(
+                  delegate: _SliverAppBarDelegate(
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: const Color(0xFF0D47A1),
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: const Color(0xFF0D47A1),
+                      tabs: const [
+                        Tab(text: 'Postingan'),
+                        Tab(text: 'Info Detail'),
+                      ],
+                    ),
+                  ),
+                  pinned: true,
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPostsTab(myPosts),
+                _buildInfoTab(),
+              ],
+            ),
+     );
+  }
+  
+  Widget _buildProfileDetails() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _siswa?.namaSiswa ?? 'Siswa',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1F2937),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '@${_siswa?.nis ?? "user"}',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            color: const Color(0xFF0D47A1),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Siswa SMP Negeri 1 Cipanas\nKelas ${_siswa?.className ?? "-"}',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(List<SocialPost> myPosts) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildStatItem('Postingan', myPosts.length.toString()),
+        _buildStatItem('Kelas', _siswa?.className ?? '-'),
+        _buildStatItem('Status', _siswa?.status ?? 'Aktif'),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsPage())),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              side: BorderSide(color: Colors.grey[300]!),
+            ),
+            child: Text('Edit Profil', style: GoogleFonts.plusJakartaSans(color: Colors.black87, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AboutPage())),
+            style: OutlinedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              side: BorderSide(color: Colors.grey[300]!),
+            ),
+            child: Text('Tentang', style: GoogleFonts.plusJakartaSans(color: Colors.black87, fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.red[100]!),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.red[50],
+          ),
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.logout, size: 20, color: Colors.red),
+            onPressed: _logout,
+          ),
+        )
+      ],
+    );
+  }
+
+  Widget _buildPostsTab(List<SocialPost> myPosts) {
+      if (myPosts.isEmpty) {
+         return Center(child: Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+             Icon(Icons.feed_outlined, size: 50, color: Colors.grey[300]),
+             const SizedBox(height: 10),
+             Text('Belum ada postingan', style: GoogleFonts.plusJakartaSans(color: Colors.grey)),
+           ],
+         ));
+      }
+      return ListView.builder(
+           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+           itemCount: myPosts.length,
+           itemBuilder: (context, index) => _buildPostCard(myPosts[index]),
       );
-    }
+  }
 
-    if (_siswa == null) return const SizedBox.shrink();
-
+  Widget _buildInfoTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120), // Added bottom padding for Nav Bar
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D47A1).withOpacity(0.1),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF0D47A1), width: 2),
-            ),
-            child: const Icon(Icons.person, size: 60, color: Color(0xFF0D47A1)),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _siswa!.namaSiswa,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1F2937),
-            ),
-          ),
-          Text(
-            _siswa!.nis ?? '-',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 32),
-          
-          _buildInfoTile('Kelas', _siswa!.className ?? '-'),
-          _buildInfoTile('Jenis Kelamin', _siswa!.jk == 'L' ? 'Laki-laki' : 'Perempuan'),
-          _buildInfoTile('Status', _siswa!.status ?? '-'),
-          _buildInfoTile('NISN', _siswa!.nisn ?? '-'),
-
-          const SizedBox(height: 32),
-          
-          // Settings Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
-                );
-              },
-              icon: const Icon(Icons.settings, color: Color(0xFF0D47A1)),
-              label: Text('Pengaturan Aplikasi', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF0D47A1)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AboutPage()),
-                );
-              },
-              icon: const Icon(Icons.info_outline, color: Color(0xFF0D47A1)),
-              label: Text('Tentang Aplikasi', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF0D47A1)),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 48),
-          
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout, color: Colors.white),
-              label: Text('Keluar Aplikasi', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
+           _buildInfoRow('NIS', _siswa?.nis ?? '-'),
+           _buildInfoRow('NISN', _siswa?.nisn ?? '-'),
+           _buildInfoRow('Jenis Kelamin', _siswa?.jk == 'L' ? 'Laki-laki' : 'Perempuan'),
+           _buildInfoRow('Wali Kelas', 'Bpk. Ahmad (Wali 9A)'),
         ],
       ),
     );
   }
 
-  Widget _buildInfoTile(String label, String value) {
-    return Container(
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF1F2937),
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: GoogleFonts.plusJakartaSans(color: Colors.grey[600])),
+          Text(value, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: Colors.black87)),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildPostCard(SocialPost post) {
+     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -253,22 +455,47 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(color: Colors.grey[600]),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1F2937),
-            ),
-          ),
+           Text(post.content, style: GoogleFonts.plusJakartaSans(fontSize: 14)),
+           const SizedBox(height: 8),
+           Row(
+             children: [
+               Icon(Icons.favorite, size: 16, color: Colors.pink[400]),
+               const SizedBox(width: 4),
+               Text('${post.likeCount}', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
+               const SizedBox(width: 16),
+               Icon(Icons.chat_bubble_outline, size: 16, color: Colors.grey[400]),
+               const SizedBox(width: 4),
+               Text('${post.commentCount}', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
+             ],
+           )
         ],
       ),
+     );
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+  _SliverAppBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Colors.grey[50], // Match background
+      child: _tabBar,
     );
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return false;
   }
 }

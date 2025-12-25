@@ -7,6 +7,8 @@ import 'package:cbt_app/services/pengumuman_service.dart';
 import 'package:cbt_app/pages/pengumuman_detail_page.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:cbt_app/widgets/skeleton_loading.dart';
+import 'package:shimmer/shimmer.dart';
 
 class InfoPage extends StatefulWidget {
   final VoidCallback? onBack;
@@ -40,9 +42,12 @@ class _InfoPageState extends State<InfoPage> {
   Future<void> _fetchAnnouncements() async {
     if (_isLoading || !_hasMore) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (_currentPage == 1) { // Only delay initial load
+       setState(() { _isLoading = true; }); 
+       await Future.delayed(const Duration(seconds: 2)); 
+    } else {
+       setState(() { _isLoading = true; }); 
+    }
 
     try {
       final response = await _service.getPengumuman(page: _currentPage);
@@ -65,9 +70,11 @@ class _InfoPageState extends State<InfoPage> {
     } catch (e) {
       showTopSnackBar(context, 'Error loading announcements: $e', backgroundColor: Colors.red);
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -97,7 +104,7 @@ class _InfoPageState extends State<InfoPage> {
               await _fetchAnnouncements();
             },
             child: _announcements.isEmpty && _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? _buildSkeletonList()
                 : _announcements.isEmpty && !_isLoading
                     ? Center(
                         child: Text(
@@ -210,6 +217,53 @@ class _InfoPageState extends State<InfoPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSkeletonList() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    SkeletonLoading(width: 36, height: 36, borderRadius: 18),
+                    SizedBox(width: 12),
+                    Expanded(child: SkeletonLoading(width: double.infinity, height: 16)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const SkeletonLoading(width: double.infinity, height: 14),
+                const SizedBox(height: 8),
+                const SkeletonLoading(width: 200, height: 14),
+                const SizedBox(height: 12),
+                const SkeletonLoading(width: 80, height: 12),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'package:cbt_app/widgets/skeleton_loading.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cbt_app/models/social_post.dart';
@@ -16,11 +18,22 @@ class SocialPage extends StatefulWidget {
 class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final List<SocialPost> _posts = SocialPost.dummyPosts;
+  bool _isLoading = true; // Add loading state
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _simulateLoading();
+  }
+  
+  Future<void> _simulateLoading() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -87,14 +100,15 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
           ),
           
           Expanded(
-            child: TabBarView(
+            child: _isLoading 
+            ? _buildSkeletonFeed()
+            : TabBarView(
               controller: _tabController,
               children: [
                 // Tab 1: All Timeline
                 _buildFeedList(_posts),
                 
                 // Tab 2: Class Updates (Filtered by User Class)
-                // Filter: Posts tagged with User's Class (e.g. "9A") or "OSIS" (Global announcements usually relevant)
                 _buildFeedList(_posts.where((p) {
                   final userClass = '9A'; // Mock User Class
                   return p.taggedClasses.contains(userClass) || p.taggedClasses.contains('OSIS'); 
@@ -103,6 +117,60 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSkeletonFeed() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                 Row(
+                   children: const [
+                     SkeletonLoading(width: 40, height: 40, borderRadius: 20),
+                     SizedBox(width: 12),
+                     Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: const [
+                            SkeletonLoading(width: 120, height: 14),
+                            SizedBox(height: 6),
+                            SkeletonLoading(width: 80, height: 12),
+                         ],
+                       ),
+                     )
+                   ],
+                 ),
+                 const SizedBox(height: 16),
+                 const SkeletonLoading(width: double.infinity, height: 14),
+                 const SizedBox(height: 8),
+                 const SkeletonLoading(width: double.infinity, height: 14),
+                 const SizedBox(height: 8),
+                 const SkeletonLoading(width: 200, height: 14),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:cbt_app/models/jadwal_model.dart';
 import 'package:cbt_app/services/jadwal_service.dart';
 import 'package:cbt_app/widgets/custom_page_header.dart';
 import 'package:cbt_app/widgets/skeleton_loading.dart';
+import 'package:shimmer/shimmer.dart';
 
 class JadwalPage extends StatefulWidget {
   final VoidCallback? onBack;
@@ -83,48 +84,52 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
 
         Expanded(
           child: _isLoading 
-            ? ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: 5,
-                itemBuilder: (context, index) {
-                   return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Column(
-                            children: const [
-                              SkeletonLoading(width: 40, height: 14),
-                              SizedBox(height: 4),
-                              SkeletonLoading(width: 30, height: 12),
-                            ],
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+            ? Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: 5,
+                  itemBuilder: (context, index) {
+                     return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Column(
                               children: const [
-                                SkeletonLoading(width: 150, height: 16),
-                                SizedBox(height: 8),
-                                SkeletonLoading(width: 100, height: 12),
+                                SkeletonLoading(width: 40, height: 14),
+                                SizedBox(height: 4),
+                                SkeletonLoading(width: 30, height: 12),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                   );
-                },
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  SkeletonLoading(width: 150, height: 16),
+                                  SizedBox(height: 8),
+                                  SkeletonLoading(width: 100, height: 12),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                     );
+                  },
+                ),
               )
             : TabBarView(
                 controller: _tabController,
