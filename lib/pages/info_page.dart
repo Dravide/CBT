@@ -83,7 +83,8 @@ class _InfoPageState extends State<InfoPage> {
       children: [
         CustomPageHeader(
           title: 'Pengumuman',
-          onBack: widget.onBack,
+          showBackButton: false,
+          leadingIcon: Icons.campaign,
         ),
         Expanded(
           child: RefreshIndicator(

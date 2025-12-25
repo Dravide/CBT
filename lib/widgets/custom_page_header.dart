@@ -6,6 +6,7 @@ class CustomPageHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final List<Widget>? actions;
   final bool showBackButton;
+  final IconData? leadingIcon; // New parameter
 
   const CustomPageHeader({
     super.key,
@@ -13,50 +14,54 @@ class CustomPageHeader extends StatelessWidget {
     this.onBack,
     this.actions,
     this.showBackButton = true,
+    this.leadingIcon,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Determine safe area top padding dynamically to match device
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D47A1),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-         boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0D47A1).withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      // Use status bar height + extra padding for "Top Limit"
+      // Use fixed padding for "Bottom Limit"
+      padding: EdgeInsets.only(
+        top: statusBarHeight > 0 ? statusBarHeight + 10 : 20, // Min 20 if no status bar
+        bottom: 12, 
+        left: 16, 
+        right: 16
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            if (showBackButton)
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: onBack ?? () => Navigator.pop(context),
+      decoration: const BoxDecoration(
+        color: Color(0xFFE3F2FD),
+      ),
+      child: Row(
+        children: [
+          if (showBackButton)
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Color(0xFF0D47A1)),
+              onPressed: onBack ?? () => Navigator.pop(context),
+            )
+          else if (leadingIcon != null)
+             Padding(
+               padding: const EdgeInsets.only(right: 12),
+               child: Icon(leadingIcon, color: const Color(0xFF0D47A1), size: 28),
+             ),
+          if (!showBackButton && leadingIcon == null)
+             const SizedBox(width: 8),
+          
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.plusJakartaSans(
+                color: const Color(0xFF0D47A1),
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
               ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            if (actions != null) ...actions!,
-          ],
-        ),
+          ),
+          if (actions != null) ...actions!,
+        ],
       ),
     );
   }

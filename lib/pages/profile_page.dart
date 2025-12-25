@@ -6,6 +6,7 @@ import 'package:cbt_app/widgets/custom_page_header.dart';
 import 'package:cbt_app/services/siswa_service.dart';
 import 'package:cbt_app/models/siswa.dart';
 import 'package:cbt_app/pages/settings_page.dart';
+import 'package:cbt_app/pages/about_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback? onBack;
@@ -104,7 +105,8 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         CustomPageHeader(
           title: 'Profil Siswa',
-          onBack: widget.onBack,
+          showBackButton: false,
+          leadingIcon: Icons.person,
         ),
         Expanded(
           child: _isLoading 
@@ -135,7 +137,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (_siswa == null) return const SizedBox.shrink();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120), // Added bottom padding for Nav Bar
       child: Column(
         children: [
           // Avatar
@@ -187,6 +189,27 @@ class _ProfilePageState extends State<ProfilePage> {
               },
               icon: const Icon(Icons.settings, color: Color(0xFF0D47A1)),
               label: Text('Pengaturan Aplikasi', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF0D47A1)),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AboutPage()),
+                );
+              },
+              icon: const Icon(Icons.info_outline, color: Color(0xFF0D47A1)),
+              label: Text('Tentang Aplikasi', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFF0D47A1)),
                 padding: const EdgeInsets.symmetric(vertical: 16),

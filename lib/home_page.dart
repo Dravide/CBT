@@ -13,7 +13,8 @@ import 'package:cbt_app/pages/about_page.dart';
 import 'package:cbt_app/pages/info_page.dart';
 import 'package:cbt_app/pages/profile_page.dart';
 import 'package:cbt_app/pages/agenda_page.dart'; 
-import 'package:cbt_app/pages/jadwal_page.dart'; // Import Jadwal Page
+import 'package:cbt_app/pages/jadwal_page.dart';
+import 'package:cbt_app/pages/social_page.dart'; // Import Social Page
 import 'package:cbt_app/widgets/top_snack_bar.dart';  
 import 'package:cbt_app/widgets/modern_bottom_nav.dart'; // New Nav
 import 'package:cbt_app/widgets/skeleton_loading.dart'; // Skeleton Loading
@@ -203,11 +204,7 @@ class _HomePageState extends State<HomePage> {
                 hasUnreadInfo: _hasUnreadAnnouncements,
                 onTap: (index) {
                   final visualIndex = _logicToVisual(index);
-                  _pageController.animateToPage(
-                    visualIndex,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutCubic,
-                  );
+                  _pageController.jumpToPage(visualIndex); // Instant jump
                   
                   setState(() {
                     _currentIndex = index;
@@ -245,7 +242,7 @@ class _HomePageState extends State<HomePage> {
         _buildHomeContent(),   // Visual 0 -> Logic 0
         _buildInfoPage(),      // Visual 1 -> Logic 1
         _buildAgendaPage(),    // Visual 2 -> Logic 4
-        _buildAboutPage(),     // Visual 3 -> Logic 2
+        SocialPage(onBack: () => _goToHome()), // Visual 3 -> Logic 2
         _buildProfilePage(),   // Visual 4 -> Logic 3
       ],
     );
@@ -254,9 +251,10 @@ class _HomePageState extends State<HomePage> {
   // Wrapper widgets to handle key/padding
   Widget _buildInfoPage() => InfoPage(onBack: () => _goToHome());
   
-  Widget _buildAgendaPage() => JadwalPage(onBack: () => _goToHome()); // Switch to JadwalPage
+  Widget _buildAgendaPage() => JadwalPage(onBack: () => _goToHome()); 
 
-  Widget _buildAboutPage() => AboutPage(onBack: () => _goToHome());
+  // Widget _buildAboutPage() => AboutPage(onBack: () => _goToHome()); // Removed
+
 
   Widget _buildProfilePage() => ProfilePage(onBack: () => _goToHome());
 

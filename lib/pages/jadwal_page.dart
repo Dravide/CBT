@@ -62,7 +62,8 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
       children: [
         CustomPageHeader(
           title: 'Jadwal Pelajaran',
-          onBack: widget.onBack,
+          showBackButton: false,
+          leadingIcon: Icons.calendar_month,
         ),
         
         // Tab Bar

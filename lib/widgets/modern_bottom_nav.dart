@@ -15,32 +15,62 @@ class ModernBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      height: 70, 
-      decoration: BoxDecoration(
-        color: Colors.white, // White Background
-        borderRadius: BorderRadius.circular(35), 
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1), // Soft shadow for light theme
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10), // Reduced side padding for more space
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Evenly spaced by Expanded
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _buildNavItem(Icons.home_filled, 'Home', 0),
-            _buildNavItem(Icons.campaign, 'Info', 1, showBadge: hasUnreadInfo),
-            _buildNavItem(Icons.calendar_month, 'Jadwal', 4),
-            _buildNavItem(Icons.info_outline, 'Tentang', 2), 
-            _buildNavItem(Icons.person, 'Profil', 3), 
+    // Visual order of logic indices: Home(0), Info(1), Jadwal(4), Social(2), Profil(3)
+    final List<int> visualOrder = [0, 1, 4, 2, 3];
+
+    return GestureDetector(
+      onHorizontalDragEnd: (details) {
+        // Threshold for swipe velocity
+        if (details.primaryVelocity == null || details.primaryVelocity!.abs() < 500) return;
+
+        final int currentVisualIndex = visualOrder.indexOf(currentIndex);
+        if (currentVisualIndex == -1) return;
+
+        int nextVisualIndex = currentVisualIndex;
+
+        if (details.primaryVelocity! < 0) {
+          // Swipe Left -> Next Item
+          if (currentVisualIndex < visualOrder.length - 1) {
+            nextVisualIndex = currentVisualIndex + 1;
+          }
+        } else {
+          // Swipe Right -> Previous Item
+          if (currentVisualIndex > 0) {
+            nextVisualIndex = currentVisualIndex - 1;
+          }
+        }
+
+        if (nextVisualIndex != currentVisualIndex) {
+          onTap(visualOrder[nextVisualIndex]);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        height: 70, 
+        decoration: BoxDecoration(
+          color: Colors.white, // White Background
+          borderRadius: BorderRadius.circular(35), 
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1), // Soft shadow for light theme
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10), // Reduced side padding for more space
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Evenly spaced by Expanded
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _buildNavItem(Icons.home_filled, 'Home', 0),
+              _buildNavItem(Icons.campaign, 'Info', 1, showBadge: hasUnreadInfo),
+              _buildNavItem(Icons.calendar_month, 'Jadwal', 4),
+              _buildNavItem(Icons.tag, 'Social', 2),  // Changed Icon
+              _buildNavItem(Icons.person, 'Profil', 3), 
+            ],
+          ),
         ),
       ),
     );
