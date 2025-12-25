@@ -42,9 +42,9 @@ class _InfoPageState extends State<InfoPage> {
   Future<void> _fetchAnnouncements() async {
     if (_isLoading || !_hasMore) return;
 
-    if (_currentPage == 1) { // Only delay initial load
+    if (_currentPage == 1) { 
        setState(() { _isLoading = true; }); 
-       await Future.delayed(const Duration(seconds: 2)); 
+       // Artificial delay removed
     } else {
        setState(() { _isLoading = true; }); 
     }

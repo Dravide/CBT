@@ -41,8 +41,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
 
   Future<void> _loadProfile() async {
-    // Artificial delay to ensure skeleton is visible
-    await Future.delayed(const Duration(seconds: 2));
+    // Artificial delay removed
+    // await Future.delayed(const Duration(seconds: 2));
     
     try {
       final prefs = await SharedPreferences.getInstance();

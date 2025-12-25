@@ -28,7 +28,7 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
   }
   
   Future<void> _simulateLoading() async {
-    await Future.delayed(const Duration(seconds: 2));
+    // Artificial delay removed for speed
     if (mounted) {
       setState(() {
         _isLoading = false;
