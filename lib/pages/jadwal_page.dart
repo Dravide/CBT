@@ -84,26 +84,19 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
 
         Expanded(
           child: _isLoading 
-            ? Shimmer.fromColors(
-                baseColor: Colors.grey[300]!,
-                highlightColor: Colors.grey[100]!,
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: 5,
-                  itemBuilder: (context, index) {
-                     return Container(
+            ? ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: 5,
+                itemBuilder: (context, index) {
+                   return Shimmer.fromColors(
+                     baseColor: Colors.grey[300]!,
+                     highlightColor: Colors.grey[100]!,
+                     child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Row(
                           children: [
@@ -127,9 +120,9 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
                             ),
                           ],
                         ),
-                     );
-                  },
-                ),
+                     ),
+                   );
+                },
               )
             : TabBarView(
                 controller: _tabController,

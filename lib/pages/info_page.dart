@@ -221,26 +221,19 @@ class _InfoPageState extends State<InfoPage> {
   }
 
   Widget _buildSkeletonList() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return Container(
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
               border: Border.all(color: Colors.grey.shade100),
             ),
             child: Column(
@@ -261,9 +254,9 @@ class _InfoPageState extends State<InfoPage> {
                 const SkeletonLoading(width: 80, height: 12),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

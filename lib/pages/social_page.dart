@@ -122,26 +122,19 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
   }
 
   Widget _buildSkeletonFeed() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return Container(
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Column(
               children: [
@@ -169,9 +162,9 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
                  const SkeletonLoading(width: 200, height: 14),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
