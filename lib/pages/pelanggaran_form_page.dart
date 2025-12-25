@@ -4,6 +4,7 @@ import 'package:cbt_app/models/pelanggaran_model.dart';
 import 'package:cbt_app/services/pelanggaran_service.dart';
 import 'package:intl/intl.dart';
 import 'package:cbt_app/widgets/custom_page_header.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PelanggaranFormPage extends StatefulWidget {
   const PelanggaranFormPage({super.key});
@@ -43,6 +44,17 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
   void initState() {
     super.initState();
     _loadOptions();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? userName = prefs.getString('user_name');
+    if (userName != null) {
+      setState(() {
+        _pelaporController.text = userName;
+      });
+    }
   }
 
   Future<void> _loadOptions() async {
@@ -53,14 +65,8 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
         _isLoading = false;
         
         // Set default status if available
-        if (_options!.statusOptions.isNotEmpty) {
-           // Default to 'belum_ditangani' if exists, else first key
-           if (_options!.statusOptions.containsKey('belum_ditangani')) {
-             _selectedStatus = 'belum_ditangani';
-           } else {
-             _selectedStatus = _options!.statusOptions.keys.first;
-           }
-        }
+        // Force default status
+        _selectedStatus = 'belum_ditangani';
       });
     } catch (e) {
       setState(() => _isLoading = false);
@@ -148,6 +154,99 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
                                     onTap: () {
                                       setState(() {
                                         _selectedSiswa = s;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showJenisSearchSheet(List<JenisPelanggaran> items) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            String query = '';
+            return StatefulBuilder(
+              builder: (context, setStateSheet) {
+                // Filter items based on query
+                final filteredItems = items.where((item) {
+                  return item.namaPelanggaran.toLowerCase().contains(query.toLowerCase());
+                }).toList();
+
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Text('Pilih Jenis Pelanggaran', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Cari jenis pelanggaran...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onChanged: (val) {
+                          setStateSheet(() => query = val);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: filteredItems.isEmpty
+                            ? Center(child: Text('Tidak ditemukan', style: GoogleFonts.plusJakartaSans(color: Colors.grey)))
+                            : ListView.separated(
+                                controller: scrollController,
+                                itemCount: filteredItems.length,
+                                separatorBuilder: (ctx, i) => const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final item = filteredItems[index];
+                                  final isSelected = _selectedJenis?.id == item.id;
+                                  return ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      item.namaPelanggaran,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? const Color(0xFF0D47A1) : Colors.black87,
+                                      ),
+                                    ),
+                                    trailing: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? const Color(0xFF0D47A1).withOpacity(0.1) : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${item.poin} Poin',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: isSelected ? const Color(0xFF0D47A1) : Colors.grey[700],
+                                        ),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedJenis = item;
                                       });
                                       Navigator.pop(context);
                                     },
@@ -291,44 +390,109 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
 
               // Kategori
               _buildLabel('Kategori Pelanggaran'),
-              DropdownButtonFormField<KategoriPelanggaran>(
-                value: _selectedKategori,
-                items: kategoriItems,
-                onChanged: (val) {
-                  setState(() {
-                    _selectedKategori = val;
-                    _selectedJenis = null; // Reset jenis
-                  });
-                },
-                decoration: _inputDecoration('Pilih Kategori'),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: (_options?.kategori ?? []).map((kategori) {
+                   final bool isSelected = _selectedKategori?.id == kategori.id;
+                   return InkWell(
+                     onTap: () {
+                        setState(() {
+                          _selectedKategori = kategori;
+                          _selectedJenis = null;
+                        });
+                     },
+                     borderRadius: BorderRadius.circular(12),
+                     child: AnimatedContainer(
+                       duration: const Duration(milliseconds: 200),
+                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                       decoration: BoxDecoration(
+                         color: isSelected ? const Color(0xFF0D47A1) : Colors.white,
+                         borderRadius: BorderRadius.circular(12),
+                         border: Border.all(
+                           color: isSelected ? const Color(0xFF0D47A1) : Colors.grey[300]!,
+                           width: 1.5,
+                         ),
+                         boxShadow: isSelected 
+                            ? [BoxShadow(color: const Color(0xFF0D47A1).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] 
+                            : [],
+                       ),
+                       child: Text(
+                         kategori.namaKategori,
+                         style: GoogleFonts.plusJakartaSans(
+                           color: isSelected ? Colors.white : Colors.grey[700],
+                           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                         ),
+                       ),
+                     ),
+                   );
+                }).toList(),
               ),
               const SizedBox(height: 16),
 
               // Jenis
               _buildLabel('Jenis Pelanggaran'),
-              DropdownButtonFormField<JenisPelanggaran>(
-                value: _selectedJenis,
-                items: jenisItems,
-                onChanged: (val) => setState(() => _selectedJenis = val),
-                 decoration: _inputDecoration('Pilih Jenis'),
-                 isExpanded: true,
+              InkWell(
+                onTap: () {
+                   if (_selectedKategori == null) {
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih Kategori terlebih dahulu')));
+                     return;
+                   }
+                   _showJenisSearchSheet(jenisItems.map((e) => e.value as JenisPelanggaran).toList());
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedJenis != null 
+                             ? '${_selectedJenis!.namaPelanggaran} (${_selectedJenis!.poin} Poin)' 
+                             : (_selectedKategori == null ? 'Pilih Kategori Dulu' : 'Pilih Jenis Pelanggaran...'),
+                          style: GoogleFonts.plusJakartaSans(
+                            color: _selectedJenis != null ? Colors.black : Colors.grey[600],
+                            fontSize: 14, // Match form field
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 
               // Status
+              // Status (Read Only Default)
               _buildLabel('Status Penanganan'),
-              DropdownButtonFormField<String>(
-                value: _selectedStatus,
-                items: statusItems,
-                onChanged: (val) => setState(() => _selectedStatus = val),
-                decoration: _inputDecoration('Status'),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Belum Ditangani',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 
               // Fields
               _buildTextField('Deskripsi Pelanggaran', _deskripsiController, maxLines: 3),
               const SizedBox(height: 16),
-              _buildTextField('Pelapor', _pelaporController),
+              _buildTextField('Pelapor', _pelaporController, isReadOnly: true),
               const SizedBox(height: 16),
               _buildTextField('Tindak Lanjut', _tindakLanjutController, maxLines: 2),
               const SizedBox(height: 16),
@@ -376,7 +540,7 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
+  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1, bool isReadOnly = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,8 +548,13 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
         TextFormField(
           controller: controller,
           maxLines: maxLines,
+          readOnly: isReadOnly,
+          enabled: !isReadOnly, 
           validator: (val) => val == null || val.isEmpty ? 'Wajib diisi' : null,
-          decoration: _inputDecoration('Masukan $label'),
+          decoration: _inputDecoration('Masukan $label').copyWith(
+            filled: isReadOnly,
+            fillColor: isReadOnly ? Colors.grey[200] : null,
+          ),
           style: GoogleFonts.plusJakartaSans(),
         ),
       ],

@@ -8,6 +8,7 @@ class Siswa {
   final String? status;
   final String? keterangan;
   final String? className;
+  final int? kelasId;
 
   Siswa({
     required this.id,
@@ -19,12 +20,20 @@ class Siswa {
     this.status,
     this.keterangan,
     this.className,
+    this.kelasId,
   });
 
   factory Siswa.fromJson(Map<String, dynamic> json) {
     String? clsName;
+    int? clsId;
+    
     if (json['kelas'] != null && json['kelas'] is Map) {
       clsName = json['kelas']['nama_kelas'];
+      clsId = json['kelas']['id'];
+    }
+    // Backup check if 'kelas_id' is at root
+    if (clsId == null && json['kelas_id'] != null) {
+      clsId = int.tryParse(json['kelas_id'].toString());
     }
 
     return Siswa(
@@ -37,6 +46,7 @@ class Siswa {
       status: json['status'],
       keterangan: json['keterangan'],
       className: clsName,
+      kelasId: clsId,
     );
   }
 }

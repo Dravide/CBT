@@ -53,7 +53,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
-      title: 'SCIPSA CBT',
+      title: 'SATRIA',
       theme: ThemeData(
         primaryColor: primaryColor,
         scaffoldBackgroundColor: Colors.white,

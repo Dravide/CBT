@@ -59,7 +59,7 @@ class AboutPage extends StatelessWidget {
                 ),
                  const SizedBox(height: 8),
                 Text(
-                  'Versi 1.0.0',
+                  'Versi 1.1.0',
                   style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[500]),
                 ),
                 
@@ -100,7 +100,7 @@ class AboutPage extends StatelessWidget {
                       icon: Icons.camera_alt,
                       color: const Color(0xFFE4405F),
                       label: 'Instagram',
-                      onTap: () => _launchUrl('https://www.instagram.com/smpn1cipanas.official'),
+                      onTap: () => _launchUrl('https://www.instagram.com/smpn1cipanas'),
                     ),
                     const SizedBox(width: 16),
                     _buildSocialButton(

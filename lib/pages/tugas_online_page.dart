@@ -4,6 +4,7 @@ import 'package:cbt_app/models/tugas_online.dart';
 import 'package:cbt_app/services/tugas_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cbt_app/widgets/custom_page_header.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TugasOnlinePage extends StatefulWidget {
   const TugasOnlinePage({super.key});
@@ -31,6 +32,21 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _checkAutoLoad();
+  }
+
+  Future<void> _checkAutoLoad() async {
+    final prefs = await SharedPreferences.getInstance();
+    final int? kelasId = prefs.getInt('kelas_id');
+    final String? nis = prefs.getString('user_nis');
+
+    if (kelasId != null) {
+      _kelasIdController.text = kelasId.toString();
+      if (nis != null) _nisController.text = nis;
+      
+      // Auto search
+      _search();
+    }
   }
 
   @override
@@ -121,7 +137,13 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
       body: Column(
         children: [
           const CustomPageHeader(title: 'Cek Tugas Online'),
-          _buildSearchForm(),
+          // Build Search Form only if not auto-loaded or explicitly desired
+          // For now, let's keep it visible but maybe collapsed or optional?
+          // User said "tidak usah cek lagi", implying they just want to see the tasks.
+          // We can hide the form if _hasSearched is true, but provide a way to show it?
+          // Or just keep it but since it auto-searches, user sees results immediately.
+          // Let's keep it simplified.
+          if (!_hasSearched) _buildSearchForm(),
           Expanded(child: _buildContent()),
         ],
       ),

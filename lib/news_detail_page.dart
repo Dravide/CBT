@@ -3,26 +3,60 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:intl/intl.dart';
 
-class NewsDetailPage extends StatelessWidget {
+class NewsDetailPage extends StatefulWidget {
   final Map<String, dynamic> post;
 
   const NewsDetailPage({super.key, required this.post});
 
   @override
+  State<NewsDetailPage> createState() => _NewsDetailPageState();
+}
+
+class _NewsDetailPageState extends State<NewsDetailPage> {
+  late ScrollController _scrollController;
+  bool _isScrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      // 200 is close to the expanded height (250) minus toolbar
+      // Adjust threshold as needed
+      if (_scrollController.offset > 180 && !_isScrolled) {
+        setState(() => _isScrolled = true);
+      } else if (_scrollController.offset <= 180 && _isScrolled) {
+        setState(() => _isScrolled = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final String title = post['title']['rendered'] ?? 'No Title';
-    final String htmlContent = post['content']['rendered'] ?? '';
-    final String dateStr = post['date'] ?? '';
+    final String title = widget.post['title']['rendered'] ?? 'No Title';
+    final String htmlContent = widget.post['content']['rendered'] ?? '';
+    final String dateStr = widget.post['date'] ?? '';
     
     DateTime? date = DateTime.tryParse(dateStr);
     final String formattedDate = date != null ? DateFormat('EEEE, dd MMMM yyyy').format(date) : '';
 
     String? imageUrl;
     try {
-      if (post['_embedded'] != null && 
-          post['_embedded']['wp:featuredmedia'] != null && 
-          post['_embedded']['wp:featuredmedia'].isNotEmpty) {
-        imageUrl = post['_embedded']['wp:featuredmedia'][0]['source_url'];
+      if (widget.post['_embedded'] != null && 
+          widget.post['_embedded']['wp:featuredmedia'] != null && 
+          widget.post['_embedded']['wp:featuredmedia'].isNotEmpty) {
+        imageUrl = widget.post['_embedded']['wp:featuredmedia'][0]['source_url'];
       }
     } catch (e) {
       // Ignore image error
@@ -31,6 +65,7 @@ class NewsDetailPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           SliverAppBar(
             expandedHeight: 250.0,
@@ -48,17 +83,19 @@ class NewsDetailPage extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
               ),
             ),
+            title: _isScrolled 
+                ? Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ) 
+                : null,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Colors.white,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
               background: imageUrl != null
                   ? Image.network(
                       imageUrl,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cbt_app/widgets/custom_page_header.dart';
+import 'package:cbt_app/widgets/top_snack_bar.dart';
 import 'package:cbt_app/models/pengumuman.dart';
 import 'package:cbt_app/services/pengumuman_service.dart';
 import 'package:cbt_app/pages/pengumuman_detail_page.dart';
@@ -62,9 +63,7 @@ class _InfoPageState extends State<InfoPage> {
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading announcements: $e')),
-      );
+      showTopSnackBar(context, 'Error loading announcements: $e', backgroundColor: Colors.red);
     } finally {
       setState(() {
         _isLoading = false;

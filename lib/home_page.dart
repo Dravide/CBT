@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cbt_app/assessment_menu.dart';
 import 'package:cbt_app/app_control.dart';
@@ -10,14 +11,21 @@ import 'package:cbt_app/pages/pelanggaran_form_page.dart';
 import 'package:cbt_app/pages/tugas_online_page.dart';
 import 'package:cbt_app/pages/about_page.dart';
 import 'package:cbt_app/pages/info_page.dart';
-import 'package:cbt_app/pages/agenda_page.dart'; // Import Agenda Page
+import 'package:cbt_app/pages/profile_page.dart';
+import 'package:cbt_app/pages/agenda_page.dart'; 
+import 'package:cbt_app/pages/jadwal_page.dart'; // Import Jadwal Page
+import 'package:cbt_app/widgets/top_snack_bar.dart';  
+import 'package:cbt_app/widgets/modern_bottom_nav.dart'; // New Nav
+import 'package:cbt_app/widgets/skeleton_loading.dart'; // Skeleton Loading
 import 'package:cbt_app/qr_scanner.dart';
-import 'package:cbt_app/models/prayer_schedule.dart'; // Import Model
+
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cbt_app/services/pengumuman_service.dart';
+import 'package:cbt_app/models/pengumuman.dart';
+import 'package:cbt_app/widgets/wellbeing_card.dart'; // Import Model
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
@@ -31,13 +39,18 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   bool _hasUnreadAnnouncements = false;
-  final PengumumanService _pengumumanService = PengumumanService();
-
-
+  PengumumanService _pengumumanService = PengumumanService();
+  String? _userName;
+  Pengumuman? _latestPengumuman;
+  bool _showWellbeing = false;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
+    _loadUserName();
+    _loadSettings();
     _checkUnreadAnnouncements();
     // Poll every 10 seconds
     Timer.periodic(const Duration(seconds: 10), (timer) {
@@ -53,7 +66,16 @@ class _HomePageState extends State<HomePage> {
     try {
       final response = await _pengumumanService.getPengumuman(page: 1, perPage: 1);
       if (response.data.isNotEmpty) {
-        final latestId = response.data.first.id;
+        final latest = response.data.first;
+        
+        // Update state for UI
+        if (_latestPengumuman?.id != latest.id) {
+           setState(() {
+            _latestPengumuman = latest;
+          });
+        }
+
+        final latestId = latest.id;
         final prefs = await SharedPreferences.getInstance();
         final lastReadId = prefs.getInt('last_read_announcement_id') ?? 0;
         
@@ -69,21 +91,18 @@ class _HomePageState extends State<HomePage> {
             final lastNotifiedId = prefs.getInt('last_notified_announcement_id') ?? 0;
             if (latestId > lastNotifiedId) {
                await prefs.setInt('last_notified_announcement_id', latestId);
-               ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Pengumuman Baru: ${response.data.first.judul}'),
-                    action: SnackBarAction(
-                      label: 'Lihat',
-                      onPressed: () {
-                         setState(() {
-                           _currentIndex = 1;
-                         });
-                         _markAnnouncementsAsRead();
-                      },
-                    ),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.red,
-                  ),
+               showTopSnackBar(
+                 context, 
+                 'Pengumuman Baru: ${latest.judul}',
+                 backgroundColor: Colors.red,
+                 actionLabel: 'Lihat',
+                 onActionPressed: () {
+                    setState(() {
+                      _currentIndex = 1;
+                    });
+                    _pageController.animateToPage(_logicToVisual(1), duration: const Duration(milliseconds: 600), curve: Curves.fastLinearToSlowEaseIn);
+                    _markAnnouncementsAsRead();
+                 },
                );
             }
           }
@@ -91,6 +110,22 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       print('Error checking announcements: $e');
+    }
+  }
+
+  Future<void> _loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('user_name') ?? 'Siswa';
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _showWellbeing = prefs.getBool('is_wellbeing_enabled') ?? false;
+      });
     }
   }
 
@@ -110,49 +145,290 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Mappings for BottomNav (Visual Order: Home, Info, Agenda, Tentang, Profil)
+  // Logic Indices: Home=0, Info=1, About=2, Profile=3, Agenda=4
+  
+  int _logicToVisual(int logicIndex) {
+    switch (logicIndex) {
+      case 0: return 0; // Home
+      case 1: return 1; // Info
+      case 4: return 2; // Agenda
+      case 2: return 3; // Tentang
+      case 3: return 4; // Profil
+      default: return 0;
+    }
+  }
+
+  int _visualToLogic(int visualIndex) {
+    switch (visualIndex) {
+      case 0: return 0; // Home
+      case 1: return 1; // Info
+      case 2: return 4; // Agenda
+      case 3: return 2; // Tentang
+      case 4: return 3; // Profil
+      default: return 0;
+    }
+  }
+
+  DateTime? _lastPressedAt;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: _buildBody(),
-      floatingActionButton: _buildScanButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildBottomAppBar(),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+
+        if (_currentIndex != 0) {
+          // If not home, go to home
+          _pageController.animateToPage(
+            0,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.fastLinearToSlowEaseIn,
+          );
+          setState(() {
+            _currentIndex = 0;
+          });
+          _loadSettings();
+          return;
+        }
+
+        // If at home, just exit
+        SystemChannels.platform.invokeMethod('SystemNavigator.pop');
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            _buildBody(),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ModernBottomNav(
+                currentIndex: _currentIndex,
+                hasUnreadInfo: _hasUnreadAnnouncements,
+                onTap: (index) {
+                  final visualIndex = _logicToVisual(index);
+                  _pageController.animateToPage(
+                    visualIndex,
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.fastLinearToSlowEaseIn,
+                  );
+                  
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                  
+                  if (index == 0) {
+                     _loadSettings(); // Refresh settings when going back to home
+                  }
+                  if (index == 1) { 
+                    _markAnnouncementsAsRead();
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildBody() {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) {
-        // Slide from right
-        final offsetAnimation = Tween<Offset>(
-          begin: const Offset(1.0, 0.0),
-          end: Offset.zero,
-        ).animate(animation);
-        return SlideTransition(position: offsetAnimation, child: child);
+    return PageView(
+      controller: _pageController,
+      onPageChanged: (visualIndex) {
+        final logicIndex = _visualToLogic(visualIndex);
+        setState(() {
+          _currentIndex = logicIndex;
+        });
+        
+        if (logicIndex == 0) _loadSettings();
+        if (logicIndex == 1) _markAnnouncementsAsRead();
       },
-      child: _getPageContent(),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        _buildHomeContent(),   // Visual 0 -> Logic 0
+        _buildInfoPage(),      // Visual 1 -> Logic 1
+        _buildAgendaPage(),    // Visual 2 -> Logic 4
+        _buildAboutPage(),     // Visual 3 -> Logic 2
+        _buildProfilePage(),   // Visual 4 -> Logic 3
+      ],
     );
   }
 
-  Widget _getPageContent() {
-    // Key is required for AnimatedSwitcher to identify widget changes
-    if (_currentIndex == 0) {
+  // Wrapper widgets to handle key/padding
+  Widget _buildInfoPage() => InfoPage(onBack: () => _goToHome());
+  
+  Widget _buildAgendaPage() => JadwalPage(onBack: () => _goToHome()); // Switch to JadwalPage
+
+  Widget _buildAboutPage() => AboutPage(onBack: () => _goToHome());
+
+  Widget _buildProfilePage() => ProfilePage(onBack: () => _goToHome());
+
+  void _goToHome() {
+    _pageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    setState(() => _currentIndex = 0);
+  }
+
+  Widget _buildHomeContent() {
       return SingleChildScrollView(
-        key: const ValueKey<int>(0),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        padding: const EdgeInsets.only(left: 24, right: 24, top: 20, bottom: 120), // Added bottom padding
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
             const SizedBox(height: 24),
-            _buildSearchBar(),
+
+            // Welcome Message
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0D47A1).withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Selamat Datang,',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _userName ?? 'Siswa',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Siap untuk belajar hari ini?',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 24),
-            _buildPrayerCard(),
-            const SizedBox(height: 24),
+
+            // Latest Info Card
+            if (_latestPengumuman != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[200]!),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, color: Color(0xFF0D47A1), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Info Terakhir',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: const Color(0xFF0D47A1),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          _latestPengumuman!.tanggal,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _latestPengumuman!.judul,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _latestPengumuman!.isi,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                     const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () {
+                         setState(() {
+                          _currentIndex = 1; // Go to Info
+                        });
+                        _pageController.animateToPage(_logicToVisual(1), duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                        _markAnnouncementsAsRead();
+                      },
+                      child: Row(
+                        children: [
+                          Text(
+                            'Selengkapnya',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: const Color(0xFF0D47A1),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward, size: 14, color: Color(0xFF0D47A1)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            if (_latestPengumuman != null) const SizedBox(height: 24),
+            
             _buildFeatureCarousel(),
             const SizedBox(height: 24),
             _buildGridCards(),
@@ -174,37 +450,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       );
-    } else if (_currentIndex == 1) {
-      return SizedBox(
-        key: const ValueKey<int>(1),
-        child: InfoPage(
-          onBack: () {
-            setState(() {
-              _currentIndex = 0;
-            });
-          },
-        ),
-      );
-    } else if (_currentIndex == 3) {
-      return AboutPage(
-        key: const ValueKey<int>(3),
-        onBack: () {
-          setState(() {
-            _currentIndex = 0;
-          });
-        },
-      );
-    } else if (_currentIndex == 4) {
-      return AgendaPage(
-        key: const ValueKey<int>(4),
-        onBack: () {
-          setState(() {
-            _currentIndex = 0;
-          });
-        },
-      );
-    }
-    return Container(key: const ValueKey<int>(99));
   }
 
 
@@ -237,167 +482,11 @@ class _HomePageState extends State<HomePage> {
   }
 
 
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: TextField(
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: 'Cari Menu...',
-          hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey[500]),
-          icon: Icon(Icons.search, color: Colors.grey[500]),
-        ),
-      ),
-    );
-  }
 
-  Future<PrayerSchedule?> _fetchPrayerSchedule() async {
-    try {
-      final response = await http.get(Uri.parse('https://api.myquran.com/v3/sholat/jadwal/006f52e9102a8d3be2fe5614f42ba989/today?tz=Asia%2FJakarta'));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == true) {
-          final jadwalMap = data['data']['jadwal'] as Map<String, dynamic>;
-          if (jadwalMap.isNotEmpty) {
-            // The API returns the schedule keyed by date (e.g. "2025-12-13")
-            // Since we requested 'today', we just take the first value.
-            return PrayerSchedule.fromJson(jadwalMap.values.first);
-          }
-        }
-      }
-      return null;
-    } catch (e) {
-      print('Error fetching prayer schedule: $e');
-      return null;
-    }
-  }
 
-  Widget _buildPrayerCard() {
-    return FutureBuilder<PrayerSchedule?>(
-      future: _fetchPrayerSchedule(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            height: 120,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0D47A1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const CircularProgressIndicator(color: Colors.white),
-          );
-        }
 
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const SizedBox.shrink(); // Hide if failed
-        }
 
-        final jadwal = snapshot.data!;
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D47A1),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0D47A1).withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
 
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Jadwal Sholat',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        _getIndonesianDate(), // Use custom formatter
-                        style: GoogleFonts.plusJakartaSans(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Icon(Icons.mosque, color: Colors.white, size: 28),
-                ],
-              ),
-              const SizedBox(height: 16),
-              SingleChildScrollView( // Make horizontal scrollable if needed on small screens
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildTimeItem('Subuh', jadwal.subuh),
-                    const SizedBox(width: 12),
-                    _buildTimeItem('Dzuhur', jadwal.dzuhur),
-                    const SizedBox(width: 12),
-                    _buildTimeItem('Ashar', jadwal.ashar),
-                    const SizedBox(width: 12),
-                    _buildTimeItem('Maghrib', jadwal.maghrib),
-                    const SizedBox(width: 12),
-                    _buildTimeItem('Isya', jadwal.isya),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  String _getIndonesianDate() {
-    final now = DateTime.now();
-    final List<String> months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    return '${now.day} ${months[now.month - 1]} ${now.year}';
-  }
-
-  Widget _buildTimeItem(String label, String time) {
-    return Column(
-      children: [
-        Text(
-          time,
-          style: GoogleFonts.plusJakartaSans(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            color: Colors.white70,
-            fontSize: 10,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildFeatureCarousel() {
     return SizedBox(
@@ -406,6 +495,13 @@ class _HomePageState extends State<HomePage> {
         controller: PageController(viewportFraction: 0.9),
         padEnds: false, // Start from left
         children: [
+          // Digital Wellbeing Card (New)
+          if (_showWellbeing)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: SizedBox(width: 250, child: const WellbeingCard()),
+            ),
+
           // Card 1: Assesmen (Existing Logic)
           Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -423,8 +519,11 @@ class _HomePageState extends State<HomePage> {
                 // Test if location services are enabled.
                 serviceEnabled = await Geolocator.isLocationServiceEnabled();
                 if (!serviceEnabled) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Layanan lokasi tidak aktif. Mohon aktifkan GPS.')));
+                  showTopSnackBar(
+                    context, 
+                    'Layanan lokasi tidak aktif. Mohon aktifkan GPS.',
+                    backgroundColor: Colors.orange,
+                  );
                   return;
                 }
 
@@ -432,15 +531,21 @@ class _HomePageState extends State<HomePage> {
                 if (permission == LocationPermission.denied) {
                   permission = await Geolocator.requestPermission();
                   if (permission == LocationPermission.denied) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Izin lokasi ditolak. Fitur ini butuh lokasi.')));
+                     showTopSnackBar(
+                        context, 
+                        'Izin lokasi ditolak. Fitur ini butuh lokasi.',
+                        backgroundColor: Colors.red,
+                     );
                     return;
                   }
                 }
                 
                 if (permission == LocationPermission.deniedForever) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Izin lokasi ditolak permanen. Buka pengaturan.')));
+                   showTopSnackBar(
+                      context, 
+                      'Izin lokasi ditolak permanen. Buka pengaturan.',
+                      backgroundColor: Colors.red,
+                   );
                   return;
                 } 
 
@@ -449,10 +554,7 @@ class _HomePageState extends State<HomePage> {
                 // but for now we block with await (UI might freeze slightly)
                 // Consider adding a simple loading dialog if needed.
                 
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Memeriksa lokasi...'),
-                  duration: Duration(seconds: 1),
-                ));
+                showTopSnackBar(context, 'Memeriksa lokasi...');
 
                 Position position = await Geolocator.getCurrentPosition(
                     desiredAccuracy: LocationAccuracy.high);
@@ -469,10 +571,11 @@ class _HomePageState extends State<HomePage> {
                 );
 
                 if (distanceInMeters > 100) {
-                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('Anda berada di luar radius ujian (${distanceInMeters.toStringAsFixed(0)}m).'),
+                   showTopSnackBar(
+                      context, 
+                      'Anda berada di luar radius ujian (${distanceInMeters.toStringAsFixed(0)}m).',
                       backgroundColor: Colors.red,
-                   ));
+                   );
                    return;
                 }
 
@@ -524,26 +627,24 @@ class _HomePageState extends State<HomePage> {
               icon: Icons.campaign,
               onTap: () {
                  // Navigate to Info Page (Index 1)
-                 setState(() {
-                   _currentIndex = 1;
-                 });
+                 setState(() => _currentIndex = 1);
+                 _pageController.animateToPage(_logicToVisual(1), duration: const Duration(milliseconds: 600), curve: Curves.fastLinearToSlowEaseIn);
               },
             ),
           ),
 
-          // Card 3: Agenda Sekolah
+          // Card 3: Jadwal Pelajaran (Formerly Agenda)
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: _buildSquareCard(
-              title: 'Agenda\nSekolah',
-              subtitle: 'Kalender Kegiatan',
+              title: 'Jadwal\nPelajaran',
+              subtitle: 'Senin - Sabtu',
               color1: const Color(0xFF7B1FA2), // Purple
               color2: const Color(0xFFBA68C8),
               icon: Icons.calendar_month,
               onTap: () {
-                setState(() {
-                  _currentIndex = 4; // Switch to Agenda Page
-                });
+                setState(() => _currentIndex = 4); // Switch to Jadwal Page
+                 _pageController.animateToPage(_logicToVisual(4), duration: const Duration(milliseconds: 600), curve: Curves.fastLinearToSlowEaseIn);
               },
             ),
           ),
@@ -737,7 +838,39 @@ class _HomePageState extends State<HomePage> {
             future: _fetchPosts(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                // Return Skeleton List
+                return ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 3,
+                  separatorBuilder: (context, index) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    return Container(
+                      width: 280,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[100]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SkeletonLoading(width: double.infinity, height: 140, borderRadius: 16),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                SkeletonLoading(width: 200, height: 20),
+                                SizedBox(height: 8),
+                                SkeletonLoading(width: 150, height: 16),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Text('Tidak ada berita.', style: GoogleFonts.plusJakartaSans(color: Colors.grey));
@@ -883,14 +1016,10 @@ class _HomePageState extends State<HomePage> {
           );
         }),
         _buildGridFeatureCard('Jadwal', Icons.schedule, Colors.purple, onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('Fitur Jadwal akan segera hadir!', style: GoogleFonts.plusJakartaSans())),
-          );
+          showTopSnackBar(context, 'Fitur Jadwal akan segera hadir!');
         }),
         _buildGridFeatureCard('Galeri', Icons.photo_library, Colors.teal, onTap: () {
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('Fitur Galeri akan segera hadir!', style: GoogleFonts.plusJakartaSans())),
-          );
+           showTopSnackBar(context, 'Fitur Galeri akan segera hadir!');
         }),
       ],
     );
@@ -939,132 +1068,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-  Widget _buildScanButton() {
-    return SizedBox(
-      width: 72,
-      height: 72,
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0D47A1), Color(0xFF42A5F5)], // Gradient Blue
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0D47A1).withOpacity(0.4),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const QRScannerPage()),
-            );
-          },
-          backgroundColor: Colors.transparent, // Transparent to show gradient
-          elevation: 0, // Remove FAB elevation
-          shape: const CircleBorder(),
-          child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 32),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomAppBar() {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: BottomAppBar(
-        color: Colors.white,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 10,
-        elevation: 0, // Handle shadow in Container
-        height: 65,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home_filled, 'Home', 0),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                _buildNavItem(Icons.campaign, 'Info', 1), // Changed icon to campaign
-                if (_hasUnreadAnnouncements)
-                  Positioned(
-                    top: 5,
-                    right: 15, // Adjusted for centering over icon
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 48), // Space for FAB
-            _buildNavItem(Icons.calendar_month, 'Agenda', 4), // Swapped
-            _buildNavItem(Icons.info_outline, 'Tentang', 3), // Swapped
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    final isSelected = _currentIndex == index;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
-        if (index == 1) { // If Info is clicked
-          _markAnnouncementsAsRead();
-        }
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? const Color(0xFF0D47A1) : Colors.grey,
-          ),
-          Text(
-            label,
-            style: GoogleFonts.plusJakartaSans(
-              color: isSelected ? const Color(0xFF0D47A1) : Colors.grey,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Fitur $feature belum tersedia'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    showTopSnackBar(context, 'Fitur $feature belum tersedia');
   }
 }
