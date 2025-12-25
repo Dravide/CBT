@@ -11,28 +11,16 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _isWellbeingEnabled = true;
-  bool _isLoading = true;
+  bool _isLoading = false; // No async load needed for now
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    // _loadSettings(); 
   }
 
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _isWellbeingEnabled = prefs.getBool('is_wellbeing_enabled') ?? false;
-      _isLoading = false;
-    });
-  }
-
-  Future<void> _toggleWellbeing(bool value) async {
-    setState(() => _isWellbeingEnabled = value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_wellbeing_enabled', value);
-  }
+  // Future<void> _loadSettings() async {}
+  // Future<void> _toggleWellbeing(bool value) async {}
 
   @override
   Widget build(BuildContext context) {
@@ -51,12 +39,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       _buildSectionHeader('Umum'),
                       const SizedBox(height: 16),
-                      _buildToggleTile(
-                        title: 'Digital Wellbeing',
-                        subtitle: 'Tampilkan kartu waktu layar di Home',
-                        value: _isWellbeingEnabled,
-                        icon: Icons.timelapse,
-                        onChanged: _toggleWellbeing,
+                      // Add more settings here in future
+                      Center(
+                        child: Text(
+                          "Belum ada pengaturan lain.", 
+                          style: GoogleFonts.plusJakartaSans(color: Colors.grey),
+                        ),
                       ),
                       // Add more settings here in future
                     ],

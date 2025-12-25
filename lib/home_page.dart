@@ -25,7 +25,6 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cbt_app/services/pengumuman_service.dart';
 import 'package:cbt_app/models/pengumuman.dart';
-import 'package:cbt_app/widgets/wellbeing_card.dart'; // Import Model
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 
@@ -42,7 +41,6 @@ class _HomePageState extends State<HomePage> {
   PengumumanService _pengumumanService = PengumumanService();
   String? _userName;
   Pengumuman? _latestPengumuman;
-  bool _showWellbeing = false;
   late PageController _pageController;
 
   @override
@@ -121,12 +119,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _showWellbeing = prefs.getBool('is_wellbeing_enabled') ?? false;
-      });
-    }
+    // Other settings if any
   }
 
   Future<void> _markAnnouncementsAsRead() async {
@@ -183,8 +176,8 @@ class _HomePageState extends State<HomePage> {
           // If not home, go to home
           _pageController.animateToPage(
             0,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.fastLinearToSlowEaseIn,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
           );
           setState(() {
             _currentIndex = 0;
@@ -212,8 +205,8 @@ class _HomePageState extends State<HomePage> {
                   final visualIndex = _logicToVisual(index);
                   _pageController.animateToPage(
                     visualIndex,
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.fastLinearToSlowEaseIn,
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOutCubic,
                   );
                   
                   setState(() {
@@ -496,11 +489,6 @@ class _HomePageState extends State<HomePage> {
         padEnds: false, // Start from left
         children: [
           // Digital Wellbeing Card (New)
-          if (_showWellbeing)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: SizedBox(width: 250, child: const WellbeingCard()),
-            ),
 
           // Card 1: Assesmen (Existing Logic)
           Padding(

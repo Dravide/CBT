@@ -30,14 +30,14 @@ class ModernBottomNav extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 10), // Reduced side padding for more space
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Evenly spaced by Expanded
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _buildNavItem(Icons.home_filled, 'Home', 0),
             _buildNavItem(Icons.campaign, 'Info', 1, showBadge: hasUnreadInfo),
-            _buildNavItem(Icons.calendar_month, 'Jadwal', 4), // Changed from Agenda
+            _buildNavItem(Icons.calendar_month, 'Jadwal', 4),
             _buildNavItem(Icons.info_outline, 'Tentang', 2), 
             _buildNavItem(Icons.person, 'Profil', 3), 
           ],
@@ -48,29 +48,30 @@ class ModernBottomNav extends StatelessWidget {
 
   Widget _buildNavItem(IconData icon, String label, int index, {bool showBadge = false}) {
     final bool isSelected = currentIndex == index;
-    return GestureDetector(
-      onTap: () => onTap(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.fastLinearToSlowEaseIn,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16 : 0, 
-          vertical: 10 
-        ),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: const Color(0xFFE3F2FD), // Very Light Blue Pill
-                borderRadius: BorderRadius.circular(25), 
-              )
-            : null,
-        child: Row(
-          children: [
-            Stack(
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque, // Catch all taps in the expanded area
+        child: Container(
+          color: Colors.transparent, // Ensures hit test works on empty space
+          height: double.infinity, // Fill vertical height
+          alignment: Alignment.center,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.all(isSelected ? 12 : 8),
+            decoration: isSelected
+                ? BoxDecoration(
+                    color: const Color(0xFFE3F2FD), // Very Light Blue Pill
+                    borderRadius: BorderRadius.circular(20), // Slightly reduced radius 
+                  )
+                : null,
+            child: Stack(
               clipBehavior: Clip.none,
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? const Color(0xFF0D47A1) : Colors.grey[400], // Blue when selected
+                  color: isSelected ? const Color(0xFF0D47A1) : Colors.grey[400],
                   size: 26, 
                 ),
                 if (showBadge)
@@ -88,23 +89,7 @@ class ModernBottomNav extends StatelessWidget {
                   ),
               ],
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 600),
-                opacity: isSelected ? 1.0 : 0.0,
-                curve: Curves.easeIn,
-                child: Text(
-                  label,
-                  style: GoogleFonts.plusJakartaSans(
-                    color: const Color(0xFF0D47A1), // Blue text when selected
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13, 
-                  ),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
