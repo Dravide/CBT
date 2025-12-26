@@ -3,9 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cbt_app/home_page.dart';
 import 'package:cbt_app/services/siswa_service.dart';
-import 'package:cbt_app/services/siswa_service.dart';
-import 'package:cbt_app/models/siswa.dart';
-import 'package:cbt_app/widgets/top_snack_bar.dart';
+import 'package:cbt_app/services/guru_service.dart';
+import 'package:cbt_app/models/guru.dart';
+import 'package:cbt_app/models/siswa.dart'; // Added Siswa Import
+import 'package:cbt_app/widgets/top_snack_bar.dart'; // Added TopSnackBar Import
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,15 +19,15 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _nisController = TextEditingController();
   final TextEditingController _tokenController = TextEditingController();
   final SiswaService _siswaService = SiswaService();
+  final GuruService _guruService = GuruService();
   bool _isLoading = false;
-  Siswa? _foundSiswa;
 
   Future<void> _login() async {
-    final String nis = _nisController.text.trim();
+    final String inputId = _nisController.text.trim();
     final String token = _tokenController.text.trim();
 
-    if (nis.isEmpty || token.isEmpty) {
-      showTopSnackBar(context, 'NIS dan Token wajib diisi', backgroundColor: Colors.red);
+    if (inputId.isEmpty || token.isEmpty) {
+      showTopSnackBar(context, 'NIS/NIP dan Token wajib diisi', backgroundColor: Colors.red);
       return;
     }
 
@@ -38,55 +39,65 @@ class _LoginPageState extends State<LoginPage> {
 
     setState(() {
       _isLoading = true;
-      _foundSiswa = null;
     });
 
     try {
-      // 2. Validate NIS via API
-      // Query by NIS
-      final result = await _siswaService.fetchSiswas(query: nis);
-      final List<Siswa> siswas = result['data'];
+      final prefs = await SharedPreferences.getInstance();
 
-      // Find exact match for NIS
-      final Siswa? match = siswas.firstWhere(
-        (s) => s.nis == nis, 
-        orElse: () => Siswa(id: 0, namaSiswa: '', nis: ''), // Dummy
+      // 2. Try Login as Siswa
+      final siswaResult = await _siswaService.fetchSiswas(query: inputId);
+      final List<Siswa> siswas = siswaResult['data'];
+      final Siswa? siswaMatch = siswas.firstWhere(
+        (s) => s.nis == inputId, 
+        orElse: () => Siswa(id: 0, namaSiswa: '', nis: ''),
       );
 
-      if (match != null && match.id != 0) {
-        _foundSiswa = match;
-        
-        // 3. Persist Login
-        final prefs = await SharedPreferences.getInstance();
+      if (siswaMatch != null && siswaMatch.id != 0) {
+        // SISWA FOUND
         await prefs.setBool('is_logged_in', true);
-        await prefs.setString('user_nis', match.nis ?? '');
-        await prefs.setString('user_name', match.namaSiswa);
-        await prefs.setInt('user_id', match.id);
-        if (match.kelasId != null) {
-          await prefs.setInt('kelas_id', match.kelasId!);
-        }
+        await prefs.setString('user_role', 'siswa');
+        await prefs.setString('user_nis', siswaMatch.nis ?? '');
+        await prefs.setString('user_name', siswaMatch.namaSiswa);
+        await prefs.setInt('user_id', siswaMatch.id);
+        if (siswaMatch.kelasId != null) await prefs.setInt('kelas_id', siswaMatch.kelasId!);
+        if (siswaMatch.className != null) await prefs.setString('user_class_name', siswaMatch.className!);
+        
+        if (!mounted) return;
+        showTopSnackBar(context, 'Login Berhasil sebagai Siswa', backgroundColor: Colors.green);
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HomePage()));
+        return;
+      }
+
+      // 3. If Not Siswa, Try Login as Guru
+      final guruResult = await _guruService.fetchGurus(query: inputId);
+      final List<Guru> gurus = guruResult['data'];
+      // Assuming 'nip' is the unique identifier for Guru matching inputId
+      final Iterable<Guru> guruMatches = gurus.where((g) => g.nip == inputId);
+      
+      if (guruMatches.isNotEmpty) {
+        final Guru guruMatch = guruMatches.first;
+        // GURU FOUND
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setString('user_role', 'guru');
+        await prefs.setString('user_nis', guruMatch.nip ?? ''); // Use NIP as NIS identifier
+        await prefs.setString('user_name', guruMatch.namaGuru);
+        await prefs.setInt('user_id', guruMatch.id);
+        // Clean up class specific data if any exists from previous session
+        await prefs.remove('kelas_id');
+        await prefs.remove('user_class_name');
 
         if (!mounted) return;
-
-        showTopSnackBar(context, 'Selamat Datang, ${match.namaSiswa}', backgroundColor: Colors.green);
-
-        // Navigate to Home
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
-
-      } else {
-        showTopSnackBar(context, 'NIS tidak ditemukan data siswa', backgroundColor: Colors.red);
+        showTopSnackBar(context, 'Login Berhasil sebagai Guru', backgroundColor: Colors.green);
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const HomePage()));
+        return;
       }
+      
+      showTopSnackBar(context, 'NIS atau NIP tidak ditemukan', backgroundColor: Colors.red);
 
     } catch (e) {
       showTopSnackBar(context, 'Error: $e', backgroundColor: Colors.red);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -165,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     _buildTextField(
                       controller: _nisController,
-                      label: 'NIS Siswa',
+                      label: 'NIS / NIP',
                       icon: Icons.person_outline,
                       inputType: TextInputType.number,
                     ),

@@ -5,6 +5,7 @@ import 'package:cbt_app/services/tugas_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cbt_app/widgets/custom_page_header.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cbt_app/pages/webview_page.dart';
 
 class TugasOnlinePage extends StatefulWidget {
   const TugasOnlinePage({super.key});
@@ -124,11 +125,13 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
     }
   }
   
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak dapat membuka link')));
-    }
+  void _launchUrl(String url, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebViewPage(url: url, title: title),
+      ),
+    );
   }
 
   @override
@@ -152,13 +155,40 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
 
   Widget _buildSearchForm() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Cari Tugas',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Masukkan ID Kelas untuk melihat tugas.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
@@ -168,39 +198,62 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: 'ID Kelas',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    hintText: 'Contoh: 12',
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 3,
                 child: TextField(
                   controller: _nisController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'NIS (Opsional)',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    labelText: 'NIS',
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    hintText: 'Opsional',
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
+            height: 50,
             child: ElevatedButton.icon(
               onPressed: _isLoading ? null : _search,
               icon: _isLoading ? const SizedBox.shrink() : const Icon(Icons.search, color: Colors.white),
               label: _isLoading 
                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
-                : const Text('Cari Tugas', style: TextStyle(color: Colors.white)),
+                : const Text('Tampilkan Tugas', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: const Color(0xFF1565C0),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -261,42 +314,77 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
   }
 
   Widget _buildNisSummary(NISSummary summary) {
-    return Card(
-      color: Colors.indigo[50],
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.indigo.shade100)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const CircleAvatar(backgroundColor: Colors.indigo, child: Icon(Icons.person, color: Colors.white)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(summary.namaSiswa, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('NIS: ${summary.nis}', style: GoogleFonts.plusJakartaSans(color: Colors.grey[700], fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem('Tugas', '${summary.jumlahTugasKelas}'),
-                _buildStatItem('Dinilai', '${summary.jumlahTugasDinilai}'),
-                _buildStatItem('Rata-rata', summary.rataRataNilaiDinilai?.toStringAsFixed(1) ?? '-'),
-              ],
-            ),
-          ],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1565C0).withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const CircleAvatar(
+                  backgroundColor: Color(0xFF1565C0), 
+                  child: Icon(Icons.person, color: Colors.white)
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summary.namaSiswa, 
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 18,
+                        color: Colors.white,
+                      )
+                    ),
+                    Text(
+                      'NIS: ${summary.nis}', 
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white.withOpacity(0.8), 
+                        fontSize: 14
+                      )
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatItem('Tugas', '${summary.jumlahTugasKelas}'),
+              Container(width: 1, height: 40, color: Colors.white24),
+              _buildStatItem('Dinilai', '${summary.jumlahTugasDinilai}'),
+              Container(width: 1, height: 40, color: Colors.white24),
+              _buildStatItem('Rata-rata', summary.rataRataNilaiDinilai?.toStringAsFixed(1) ?? '-'),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -304,23 +392,54 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
   Widget _buildStatItem(String label, String value) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.indigo)),
-        Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[600])),
+        Text(
+          value, 
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w800, 
+            fontSize: 22, 
+            color: Colors.white
+          )
+        ),
+        Text(
+          label, 
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12, 
+            color: Colors.white.withOpacity(0.8)
+          )
+        ),
       ],
     );
   }
 
   Widget _buildTugasCard(TugasItem tugas) {
     Color statusColor = Colors.grey;
-    if (tugas.status == 'Aktif') statusColor = Colors.green;
-    if (tugas.status == 'Selesai') statusColor = Colors.orange;
+    Color statusBg = Colors.grey.withOpacity(0.1);
+    
+    if (tugas.status == 'Aktif') {
+      statusColor = Colors.green[700]!;
+      statusBg = Colors.green.withOpacity(0.1);
+    }
+    if (tugas.status == 'Selesai') {
+      statusColor = Colors.orange[800]!;
+      statusBg = Colors.orange.withOpacity(0.1);
+    }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -328,55 +447,123 @@ class _TugasOnlinePageState extends State<TugasOnlinePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                  child: Text(tugas.status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    tugas.status.toUpperCase(), 
+                    style: GoogleFonts.plusJakartaSans(
+                      color: statusColor, 
+                      fontWeight: FontWeight.w700, 
+                      fontSize: 10,
+                      letterSpacing: 0.5
+                    ),
+                  ),
                 ),
-                Text(tugas.periodeShort, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
+                Text(
+                  tugas.periodeShort, 
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12, 
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500
+                  )
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(tugas.judul, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16)),
-            Text('${tugas.mapel} • ${tugas.guru}', style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[700])),
+            const SizedBox(height: 16),
+            Text(
+              tugas.judul, 
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800, 
+                fontSize: 18,
+                height: 1.2
+              )
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${tugas.mapel} • ${tugas.guru}', 
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14, 
+                color: Colors.grey[600]
+              )
+            ),
             
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+            const SizedBox(height: 16),
+
             if (_data?.nisSummary != null) ...[
-               const SizedBox(height: 12),
                if (tugas.submitted == true)
                  Row(
                    children: [
-                     const Icon(Icons.check_circle, color: Colors.green, size: 16),
-                     const SizedBox(width: 4),
-                     Text('Sudah dikerjakan', style: GoogleFonts.plusJakartaSans(color: Colors.green, fontSize: 12)),
+                     const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                     const SizedBox(width: 8),
+                     Text('Sudah dikerjakan', style: GoogleFonts.plusJakartaSans(color: Colors.green, fontWeight: FontWeight.w600, fontSize: 13)),
                      if (tugas.sudahDinilai) ...[
-                        const SizedBox(width: 8),
-                        Text('• Nilai: ${tugas.nilaiSiswa ?? "-"}', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                             color: Colors.blue[50],
+                             borderRadius: BorderRadius.circular(20),
+                             border: Border.all(color: Colors.blue[100]!)
+                          ),
+                          child: Text(
+                            'Nilai: ${tugas.nilaiSiswa ?? "-"}', 
+                            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue[800])
+                          ),
+                        ),
                      ]
                    ],
                  )
                else
                  Row(
                    children: [
-                     Icon(Icons.cancel, color: Colors.red[300], size: 16),
-                     const SizedBox(width: 4),
-                     Text('Belum dikerjakan', style: GoogleFonts.plusJakartaSans(color: Colors.red[300], fontSize: 12)),
+                     Icon(Icons.cancel, color: Colors.red[300], size: 20),
+                     const SizedBox(width: 8),
+                     Text('Belum dikerjakan', style: GoogleFonts.plusJakartaSans(color: Colors.red[300], fontWeight: FontWeight.w600, fontSize: 13)),
                    ],
                  ),
             ] else ...[
-               const SizedBox(height: 12),
-               LinearProgressIndicator(
-                 value: tugas.totalSiswa > 0 ? tugas.jumlahSudah / tugas.totalSiswa : 0,
-                 backgroundColor: Colors.grey[200],
-                 valueColor: AlwaysStoppedAnimation<Color>(Colors.indigo.shade300),
+               Row(
+                 children: [
+                   Expanded(
+                     child: LinearProgressIndicator(
+                       value: tugas.totalSiswa > 0 ? tugas.jumlahSudah / tugas.totalSiswa : 0,
+                       backgroundColor: Colors.grey[100],
+                       valueColor: AlwaysStoppedAnimation<Color>(Colors.indigo.shade400),
+                       minHeight: 6,
+                       borderRadius: BorderRadius.circular(4),
+                     ),
+                   ),
+                   const SizedBox(width: 12),
+                   Text(
+                     '${tugas.jumlahSudah}/${tugas.totalSiswa}', 
+                     style: GoogleFonts.plusJakartaSans(
+                       fontSize: 12, 
+                       color: Colors.grey[600],
+                       fontWeight: FontWeight.bold
+                      )
+                   ),
+                 ],
                ),
-               const SizedBox(height: 4),
-               Text('${tugas.jumlahSudah} dari ${tugas.totalSiswa} siswa sudah mengumpulkan', style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey)),
             ],
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => _launchUrl(tugas.magicLink),
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () => _launchUrl(tugas.magicLink, tugas.judul),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1565C0),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)
+                ),
                 child: const Text('Buka Tugas'),
               ),
             ),

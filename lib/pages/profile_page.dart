@@ -3,18 +3,25 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cbt_app/pages/login_page.dart';
 import 'package:cbt_app/widgets/custom_page_header.dart';
+import 'package:cbt_app/services/guru_service.dart';
+import 'package:cbt_app/models/guru.dart';
+
 import 'package:cbt_app/services/siswa_service.dart';
 import 'package:cbt_app/models/siswa.dart';
 import 'package:cbt_app/pages/settings_page.dart';
 import 'package:cbt_app/pages/about_page.dart';
 import 'package:cbt_app/models/social_post.dart';
+import 'package:cbt_app/services/social_service.dart'; 
+import 'package:cbt_app/pages/social_widgets.dart'; // Shared Widgets
 import 'package:cbt_app/widgets/skeleton_loading.dart';
 import 'package:shimmer/shimmer.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback? onBack;
+  final String? otherUserNis; // Optional: If set, view this user's profile
+  final String? otherUserRole; // Optional: To distinguish Guru vs Siswa
 
-  const ProfilePage({super.key, this.onBack});
+  const ProfilePage({super.key, this.onBack, this.otherUserNis, this.otherUserRole}); // Updated constructor
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -22,10 +29,18 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   final SiswaService _siswaService = SiswaService();
+  final GuruService _guruService = GuruService(); // Add Service
+  final SocialService _socialService = SocialService();
+  
   bool _isLoading = true;
+  bool _isLoadingPosts = false;
   Siswa? _siswa;
+  Guru? _guru; // Add Guru Model
+  bool _isTeacher = false; // Add Role flag
   String? _errorMessage;
   late TabController _tabController;
+  List<SocialPost> _myPosts = [];
+  bool _isMe = false;
 
   @override
   void initState() {
@@ -34,57 +49,135 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     _loadProfile();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadProfile() async {
-    // Artificial delay removed
-    // await Future.delayed(const Duration(seconds: 2));
-    
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String? nis = prefs.getString('user_nis');
+      String? nis = prefs.getString('user_nis');
+      String? role = prefs.getString('user_role'); // Check role
+      
+      String? targetNis;
 
-      if (nis == null) {
-        if (mounted) {
-          setState(() {
-            _errorMessage = 'Data sesi tidak ditemukan. Silakan login ulang.';
-            _isLoading = false;
-          });
-        }
+      if (widget.otherUserNis != null) {
+         targetNis = widget.otherUserNis;
+         _isMe = (widget.otherUserNis == nis);
+         
+         if (widget.otherUserRole != null) {
+            // Explicit role passed
+            _isTeacher = (widget.otherUserRole == 'guru');
+         } else {
+            // Fallback: If no role passed, assume student (Legacy behavior)
+            _isTeacher = false; 
+         }
+
+      } else {
+         targetNis = nis;
+         _isMe = true;
+         _isTeacher = (role == 'guru');
+      }
+
+      // Update UI immediately with role info before fetching data
+      if (mounted) setState(() {});
+
+      if (targetNis == null) {
+        if (mounted) setState(() { _errorMessage = 'Sesi habis'; _isLoading = false; });
         return;
       }
 
-      final result = await _siswaService.fetchSiswas(query: nis);
-      final List<Siswa> siswas = result['data'];
-      
-      try {
-         final Siswa match = siswas.firstWhere((s) => s.nis == nis);
-         if (mounted) {
-           setState(() {
-             _siswa = match;
-             _isLoading = false;
-           });
-         }
-      } catch (e) {
-         if (mounted) {
-           setState(() {
-            _errorMessage = 'Data siswa tidak ditemukan di server.';
-            _isLoading = false;
-           });
-         }
+      // LOAD BASED ON ROLE
+      bool tryGuruFirst = _isTeacher;
+
+      // Helper function to try loading Guru
+      Future<bool> loadGuru() async {
+        try {
+          final result = await _guruService.fetchGurus(query: targetNis);
+          final List<Guru> gurus = result['data'];
+          if (gurus.isEmpty) return false;
+          
+          final Guru match = gurus.firstWhere((g) => g.nip == targetNis, orElse: () => throw Exception("Not found"));
+          if (mounted) {
+            setState(() {
+              _guru = match;
+              _siswa = null;
+              _isTeacher = true; // Update state to reflect reality
+              _isLoading = false;
+            });
+            _loadMyPosts(match.id, match.nip);
+          }
+          return true;
+        } catch (e) {
+          return false;
+        }
       }
-      
+
+      // Helper function to try loading Siswa
+      Future<bool> loadSiswa() async {
+        try {
+          final result = await _siswaService.fetchSiswas(query: targetNis);
+          final List<Siswa> siswas = result['data'];
+          if (siswas.isEmpty) return false;
+
+          final Siswa match = siswas.firstWhere((s) => s.nis == targetNis, orElse: () => throw Exception("Not found"));
+          if (mounted) {
+            setState(() {
+              _siswa = match;
+              _guru = null;
+              _isTeacher = false; // Update state to reflect reality
+              _isLoading = false;
+            });
+            _loadMyPosts(match.id, match.nis);
+          }
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      // Execute Strategy
+      bool found = false;
+      if (tryGuruFirst) {
+        found = await loadGuru();
+        if (!found) found = await loadSiswa();
+      } else {
+        found = await loadSiswa();
+        if (!found) found = await loadGuru();
+      }
+
+      if (!found) {
+         if (mounted) setState(() { _errorMessage = 'User tidak ditemukan'; _isLoading = false; });
+      }
+
     } catch (e) {
-       if (mounted) {
-         setState(() {
-          _errorMessage = 'Gagal memuat profil: $e';
-          _isLoading = false;
-         });
-       }
+       if (mounted) setState(() { _errorMessage = 'Gagal load: $e'; _isLoading = false; });
+    }
+  }
+
+  Future<void> _loadMyPosts(int userId, String? userNis) async {
+    if (userNis == null) return;
+    setState(() => _isLoadingPosts = true);
+    try {
+      final response = await _socialService.getTimeline(
+        page: 1, 
+        userFilter: userNis,
+        userFilterType: _isTeacher ? 'guru' : 'siswa',
+      );
+      if (mounted) {
+        setState(() {
+          var filteredPosts = response.posts.where((p) => 
+            p.authorNis == userNis || 
+            p.userHandle == '@$userNis' ||
+            p.userHandle == userNis
+          ).toList();
+          
+          if (_isTeacher) {
+            _myPosts = filteredPosts.map((p) => p.copyWith(authorType: 'guru')).toList();
+          } else {
+            _myPosts = filteredPosts;
+          }
+          _isLoadingPosts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingPosts = false);
     }
   }
 
@@ -104,7 +197,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               Navigator.pop(context);
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              
               if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -122,86 +214,27 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    // Filter my posts
-    final myPosts = SocialPost.dummyPosts.where((p) => p.userName == 'Siswa (Saya)' || p.userHandle == '@siswa_satria').toList();
-
-    return Column(
-      children: [
-        CustomPageHeader(
-          title: 'Profil Siswa',
-          showBackButton: false,
-          leadingIcon: Icons.person,
-        ),
-        Expanded(
-          child: _isLoading 
-            ? _buildSkeleton()
-            : _buildContent(myPosts),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSkeleton() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Header Skeleton
-            Row(
-              children: [
-                const SkeletonLoading(width: 80, height: 80, borderRadius: 40),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      SkeletonLoading(width: 150, height: 20),
-                      SizedBox(height: 8),
-                      SkeletonLoading(width: 100, height: 14),
-                      SizedBox(height: 8),
-                      SkeletonLoading(width: 180, height: 14),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            // Stats Skeleton
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: const [
-                 SkeletonLoading(width: 60, height: 40),
-                 SkeletonLoading(width: 60, height: 40),
-                 SkeletonLoading(width: 60, height: 40),
-              ],
-            ),
-            const SizedBox(height: 32),
-            // Buttons
-            Row(
-              children: const [
-                Expanded(child: SkeletonLoading(width: double.infinity, height: 40)),
-                SizedBox(width: 8),
-                Expanded(child: SkeletonLoading(width: double.infinity, height: 40)),
-              ],
-            ),
-            const SizedBox(height: 32),
-            // Content Skeleton
-            Column(
-               children: List.generate(3, (index) => Padding(
-                 padding: const EdgeInsets.only(bottom: 16),
-                 child: const SkeletonLoading(width: double.infinity, height: 100),
-               )),
-            ),
-          ],
-        ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          CustomPageHeader(
+            title: _isTeacher ? 'Profil Guru' : 'Profil Siswa',
+            showBackButton: !_isMe,
+            leadingIcon: Icons.person_rounded,
+            onBack: widget.onBack,
+          ),
+          Expanded(
+            child: _isLoading 
+              ? _buildSkeleton()
+              : _buildContent(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildContent(List<SocialPost> myPosts) {
+  Widget _buildContent() {
      if (_errorMessage != null) {
         return Center(
           child: Column(
@@ -218,114 +251,153 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         );
      }
      
+     final String name = _isTeacher ? (_guru?.namaGuru ?? '') : (_siswa?.namaSiswa ?? '');
+     final String idNumber = _isTeacher ? (_guru?.nip ?? '-') : (_siswa?.nis ?? 'user');
+     final String initial = name.isNotEmpty ? name[0] : '?';
+
      return NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        // Avatar & Basic Info
-                        Row(
-                          children: [
-                            Container(
-                              width: 80, height: 80,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.grey[300]!),
-                                image: const DecorationImage(
-                                   // Placeholder for avatar image
-                                   image: AssetImage('assets/avatar_placeholder.png'), 
-                                   fit: BoxFit.cover, 
-                                ),
-                              ),
-                              child: const Center(
-                                  child: Icon(Icons.person, size: 40, color: Colors.grey),
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            Expanded(child: _buildProfileDetails()),
-                          ],
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Column(
+                  children: [
+                    // 1. Avatar Section
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+                      ),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: const Color(0xFFF5F5F5),
+                        backgroundImage: null,
+                        child: Text(
+                          initial,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 40, 
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1565C0),
+                          ),
                         ),
-                        // Stats & Buttons
-                        const SizedBox(height: 24),
-                        _buildStatsRow(myPosts), 
-                        const SizedBox(height: 24),
-                        _buildActionButtons(),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                SliverPersistentHeader(
-                  delegate: _SliverAppBarDelegate(
-                    TabBar(
-                      controller: _tabController,
-                      labelColor: const Color(0xFF0D47A1),
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: const Color(0xFF0D47A1),
-                      tabs: const [
-                        Tab(text: 'Postingan'),
-                        Tab(text: 'Info Detail'),
-                      ],
+                    const SizedBox(height: 16),
+                    
+                    // 2. Name & Role
+                    Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF212121),
+                      ),
                     ),
-                  ),
-                  pinned: true,
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _isTeacher ? 'NIP. $idNumber' : 'NIS. $idNumber',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: Colors.blue[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 32),
+
+                    // 3. Stats Row
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade100),
+                        boxShadow: [
+                           BoxShadow(
+                             color: Colors.black.withOpacity(0.03),
+                             blurRadius: 10,
+                             offset: const Offset(0, 4),
+                           ) 
+                        ],
+                      ),
+                      child: _buildStatsRow(),
+                    ),
+                    
+                    // 4. Action Buttons
+                    if (_isMe) ...[
+                      const SizedBox(height: 24),
+                      _buildActionButtons(),
+                    ],
+                  ],
                 ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildPostsTab(myPosts),
-                _buildInfoTab(),
-              ],
+              ),
             ),
+            
+            SliverPersistentHeader(
+              delegate: _SliverAppBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  labelColor: const Color(0xFF1565C0),
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: const Color(0xFF1565C0),
+                  indicatorWeight: 3,
+                  labelStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold),
+                  tabs: const [
+                    Tab(text: 'Postingan'),
+                    Tab(text: 'Info Detail'),
+                  ],
+                ),
+              ),
+              pinned: true,
+            ),
+          ];
+        },
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+             _buildPostsTab(),
+             _buildInfoTab(),
+          ],
+        ),
      );
   }
-  
-  Widget _buildProfileDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _siswa?.namaSiswa ?? 'Siswa',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: const Color(0xFF1F2937),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '@${_siswa?.nis ?? "user"}',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            color: const Color(0xFF0D47A1),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Siswa SMP Negeri 1 Cipanas\nKelas ${_siswa?.className ?? "-"}',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            color: Colors.grey[600],
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildStatsRow(List<SocialPost> myPosts) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _buildStatItem('Postingan', myPosts.length.toString()),
-        _buildStatItem('Kelas', _siswa?.className ?? '-'),
-        _buildStatItem('Status', _siswa?.status ?? 'Aktif'),
-      ],
+  Widget _buildSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const SkeletonLoading(width: 80, height: 80, borderRadius: 40),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    children: const [
+                      SkeletonLoading(width: 150, height: 20),
+                      SizedBox(height: 8),
+                      SkeletonLoading(width: 100, height: 14),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -372,8 +444,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildPostsTab(List<SocialPost> myPosts) {
-      if (myPosts.isEmpty) {
+  Widget _buildPostsTab() {
+      if (_isLoadingPosts) {
+         return const Center(child: CircularProgressIndicator());
+      }
+      if (_myPosts.isEmpty) {
          return Center(child: Column(
            mainAxisAlignment: MainAxisAlignment.center,
            children: [
@@ -385,12 +460,51 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       }
       return ListView.builder(
            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-           itemCount: myPosts.length,
-           itemBuilder: (context, index) => _buildPostCard(myPosts[index]),
+           itemCount: _myPosts.length,
+           itemBuilder: (context, index) => _buildPostCard(_myPosts[index]),
       );
   }
 
+  Widget _buildStatsRow() {
+    if (_isTeacher && _guru != null) {
+       return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildStatItem('Postingan', _myPosts.length.toString()),
+          _buildStatItem('Siswa Ajar', _guru!.siswaCount.toString()),
+          _buildStatItem('Status', 'Guru'),
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildStatItem('Postingan', _myPosts.length.toString()),
+        _buildStatItem('Kelas', _siswa?.className ?? '-'),
+        _buildStatItem('Status', _siswa?.status ?? 'Aktif'),
+      ],
+    );
+  }
+
   Widget _buildInfoTab() {
+    if (_isTeacher && _guru != null) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+             _buildInfoRow('NIP', _guru!.nip ?? '-'),
+             _buildInfoRow('Email', _guru!.email ?? '-'),
+             _buildInfoRow('Telepon', _guru!.telepon ?? '-'),
+             if (_guru!.isWaliKelas)
+               _buildInfoRow('Tugas Tambahan', 'Wali Kelas'),
+             _buildInfoRow('Mata Pelajaran', _guru!.mataPelajaran ?? '-'),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
       child: Column(
@@ -441,39 +555,41 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
   
   Widget _buildPostCard(SocialPost post) {
-     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return SocialPostCard(
+      post: post,
+      onTap: () {},
+      onLike: () async {
+         setState(() { post.isLiked = !post.isLiked; post.likeCount += post.isLiked ? 1 : -1; });
+         try { await _socialService.toggleLike(post.id); } 
+         catch(e) { 
+           setState(() { post.isLiked = !post.isLiked; post.likeCount += post.isLiked ? 1 : -1; });
+         }
+      },
+      onComment: () {
+         _showPostDetailPopup(post);
+      },
+      onLongPress: (p) => _showPostDetailPopup(p),
+    );
+  }
+
+  void _showPostDetailPopup(SocialPost post) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentNis = prefs.getString('user_nis');
+    
+    if (!mounted) return;
+
+    final result = await showDialog(
+      context: context,
+      builder: (context) => PostDetailDialog(
+        post: post, 
+        currentUserNis: currentNis
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-           Text(post.content, style: GoogleFonts.plusJakartaSans(fontSize: 14)),
-           const SizedBox(height: 8),
-           Row(
-             children: [
-               Icon(Icons.favorite, size: 16, color: Colors.pink[400]),
-               const SizedBox(width: 4),
-               Text('${post.likeCount}', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
-               const SizedBox(width: 16),
-               Icon(Icons.chat_bubble_outline, size: 16, color: Colors.grey[400]),
-               const SizedBox(width: 4),
-               Text('${post.commentCount}', style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey)),
-             ],
-           )
-        ],
-      ),
-     );
+    );
+
+    if (result == true) {
+       if (_siswa != null) _loadMyPosts(_siswa!.id, _siswa!.nis);
+       if (_guru != null) _loadMyPosts(_guru!.id, _guru!.nip);
+    }
   }
 }
 
@@ -489,7 +605,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.grey[50], // Match background
+      color: Colors.white,
       child: _tabBar,
     );
   }

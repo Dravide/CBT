@@ -49,7 +49,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
     final String dateStr = widget.post['date'] ?? '';
     
     DateTime? date = DateTime.tryParse(dateStr);
-    final String formattedDate = date != null ? DateFormat('EEEE, dd MMMM yyyy').format(date) : '';
+    final String formattedDate = date != null ? DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date) : '';
 
     String? imageUrl;
     try {

@@ -45,7 +45,7 @@ class _PengumumanDetailPageState extends State<PengumumanDetailPage> {
           } else if (snapshot.hasData) {
             final item = snapshot.data!;
             final date = DateTime.tryParse(item.tanggal) ?? DateTime.now();
-            final formattedDate = DateFormat('EEEE, dd MMMM yyyy').format(date);
+            final formattedDate = DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date);
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),

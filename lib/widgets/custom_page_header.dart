@@ -6,7 +6,9 @@ class CustomPageHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final List<Widget>? actions;
   final bool showBackButton;
-  final IconData? leadingIcon; // New parameter
+  final IconData? leadingIcon;
+  final IconData? actionIcon;
+  final VoidCallback? onActionPressed;
 
   const CustomPageHeader({
     super.key,
@@ -15,6 +17,8 @@ class CustomPageHeader extends StatelessWidget {
     this.actions,
     this.showBackButton = true,
     this.leadingIcon,
+    this.actionIcon,
+    this.onActionPressed,
   });
 
   @override
@@ -60,6 +64,11 @@ class CustomPageHeader extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (actionIcon != null)
+             IconButton(
+               icon: Icon(actionIcon, color: const Color(0xFF0D47A1)),
+               onPressed: onActionPressed,
+             ),
           if (actions != null) ...actions!,
         ],
       ),

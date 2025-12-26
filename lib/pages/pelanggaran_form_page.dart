@@ -381,7 +381,7 @@ class _PelanggaranFormPageState extends State<PelanggaranFormPage> {
                     children: [
                       const Icon(Icons.calendar_today, size: 16),
                       const SizedBox(width: 8),
-                      Text(DateFormat('dd MMM yyyy').format(_selectedDate), style: GoogleFonts.plusJakartaSans()),
+                      Text(DateFormat('dd MMM yyyy', 'id_ID').format(_selectedDate), style: GoogleFonts.plusJakartaSans()),
                     ],
                   ),
                 ),

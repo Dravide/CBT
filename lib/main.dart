@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cbt_app/splash_screen.dart';
+import 'package:intl/date_symbol_data_local.dart'; 
 // import 'package:cbt_app/services/fcm_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -15,8 +16,12 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 //   await FcmService.firebaseMessagingBackgroundHandler(message);
 // }
 
+
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null); // Initialize 'id_ID' locale
   // await Firebase.initializeApp(); // Disabled as requested
   // FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 class SkeletonLoading extends StatelessWidget {
   final double? width;
@@ -14,12 +15,16 @@ class SkeletonLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Colors.black, // Color doesn't matter as Shimmer overrides it
-        borderRadius: BorderRadius.circular(borderRadius),
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white, // Color required for Shimmer to work
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
       ),
     );
   }

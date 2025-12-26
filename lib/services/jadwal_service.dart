@@ -13,14 +13,15 @@ class JadwalService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt('user_id');
+      final userRole = prefs.getString('user_role') ?? 'siswa'; // Default to siswa
       
       if (userId == null) return [];
 
       // Construct URL
-      // Endpoint: /jadwal?user_id=123&user_type=siswa
+      // Endpoint: /jadwal?user_id=123&user_type=siswa_or_guru
       final uri = Uri.parse('$baseUrl/jadwal').replace(queryParameters: {
         'user_id': userId.toString(),
-        'user_type': 'siswa',
+        'user_type': userRole,
       });
 
       final response = await http.get(uri);

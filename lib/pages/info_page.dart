@@ -106,13 +106,21 @@ class _InfoPageState extends State<InfoPage> {
             child: _announcements.isEmpty && _isLoading
                 ? _buildSkeletonList()
                 : _announcements.isEmpty && !_isLoading
-                    ? Center(
-                        child: Text(
-                          'Tidak ada pengumuman.',
-                          style: GoogleFonts.plusJakartaSans(color: Colors.grey),
+                    ? LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            height: constraints.maxHeight,
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Tidak ada pengumuman.',
+                              style: GoogleFonts.plusJakartaSans(color: Colors.grey),
+                            ),
+                          ),
                         ),
                       )
                     : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(16),
                         controller: _scrollController,
                         itemCount: _announcements.length + (_hasMore ? 1 : 0),
@@ -128,12 +136,13 @@ class _InfoPageState extends State<InfoPage> {
 
                           final item = _announcements[index];
                           final date = DateTime.tryParse(item.tanggal) ?? DateTime.now();
-                          final formattedDate = DateFormat('dd MMM yyyy').format(date);
+                          final formattedDate = DateFormat('dd MMM yyyy', 'id_ID').format(date);
+                          final isLatest = index == 0; // First item is latest
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: isLatest ? const Color(0xFFE3F2FD) : Colors.white, // Light blue for latest
                               borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
@@ -142,7 +151,9 @@ class _InfoPageState extends State<InfoPage> {
                                   offset: const Offset(0, 2),
                                 ),
                               ],
-                              border: Border.all(color: Colors.grey.shade100),
+                              border: Border.all(
+                                color: isLatest ? const Color(0xFF90CAF9) : Colors.grey.shade100
+                              ),
                             ),
                             child: Material(
                               color: Colors.transparent,
@@ -162,29 +173,55 @@ class _InfoPageState extends State<InfoPage> {
                                           Container(
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF0D47A1).withOpacity(0.1),
+                                              color: isLatest ? Colors.white : const Color(0xFF0D47A1).withOpacity(0.1),
                                               shape: BoxShape.circle,
                                             ),
-                                            child: const Icon(Icons.campaign, color: Color(0xFF0D47A1), size: 20),
+                                            child: Icon(
+                                              Icons.campaign, 
+                                              color: const Color(0xFF0D47A1), 
+                                              size: 20
+                                            ),
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
-                                            child: Text(
-                                              item.judul,
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: const Color(0xFF1F2937),
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                if (isLatest)
+                                                  Container(
+                                                    margin: const EdgeInsets.only(bottom: 4),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF1565C0),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      'TERBARU',
+                                                      style: GoogleFonts.plusJakartaSans(
+                                                        color: Colors.white,
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                Text(
+                                                  item.judul,
+                                                  style: GoogleFonts.plusJakartaSans(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                    color: const Color(0xFF1F2937),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 12),
                                       Text(
-                                        item.isi,
+                                        _removeHtmlTags(item.isi), // Strip HTML tags
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 14,
                                           color: Colors.grey[600],
@@ -264,80 +301,93 @@ class _InfoPageState extends State<InfoPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: true, // Explicitly allow dismissing
+      enableDrag: true, // Allow dragging to close
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (_, controller) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.all(24),
-          child: FutureBuilder<Pengumuman>(
-            future: _service.getPengumumanDetail(id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              } else if (snapshot.hasData) {
-                final item = snapshot.data!;
-                final date = DateTime.tryParse(item.tanggal) ?? DateTime.now();
-                final formattedDate =
-                    DateFormat('EEEE, dd MMMM yyyy').format(date);
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
+      builder: (context) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, controller) => GestureDetector(
+            onTap: () {}, // Prevent closing when clicking content
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              padding: const EdgeInsets.all(24),
+              child: FutureBuilder<Pengumuman>(
+                future: _service.getPengumumanDetail(id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  } else if (snapshot.hasData) {
+                    final item = snapshot.data!;
+                    final date = DateTime.tryParse(item.tanggal) ?? DateTime.now();
+                    final formattedDate =
+                        DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date);
+    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      item.judul,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromRGBO(18, 26, 28, 1),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      formattedDate,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const Divider(height: 32),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: controller,
-                        child: HtmlWidget(
-                          item.isi,
-                          textStyle:
-                              GoogleFonts.plusJakartaSans(fontSize: 16, height: 1.5),
+                        const SizedBox(height: 24),
+                        Text(
+                          item.judul,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: const Color.fromRGBO(18, 26, 28, 1),
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
-                );
-              } else {
-                return const Center(child: Text('No data'));
-              }
-            },
+                        const SizedBox(height: 8),
+                        Text(
+                          formattedDate,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const Divider(height: 32),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: controller,
+                            child: HtmlWidget(
+                              item.isi,
+                              textStyle:
+                                  GoogleFonts.plusJakartaSans(fontSize: 16, height: 1.5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return const Center(child: Text('No data'));
+                  }
+                },
+              ),
+            ),
           ),
         ),
       ),
     );
   }
-}
+  String _removeHtmlTags(String htmlString) {
+    final RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
+    return htmlString.replaceAll(exp, '');
+  }
+} // End of class

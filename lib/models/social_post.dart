@@ -1,153 +1,177 @@
 class SocialComment {
-  final String id;
+  final String id; // Keep as String for safety, convert from API int/long
   final String userName;
-  final String userAvatar;
+  final String? authorNis; // To identify ownership
+  final String? userAvatar;
   final String content;
   final DateTime timestamp;
 
   SocialComment({
     required this.id,
     required this.userName,
-    required this.userAvatar,
+    this.userAvatar,
     required this.content,
     required this.timestamp,
+    this.authorNis,
   });
+
+  factory SocialComment.fromJson(Map<String, dynamic> json) {
+    return SocialComment(
+      id: json['id'].toString(),
+      userName: json['user_name'] ?? 'Anonim',
+      userAvatar: json['user_avatar'], // Can be null
+      content: json['content'] ?? '',
+      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      // Try to get NIS from available fields. 
+      // If backend sends 'user_handle' in comments too:
+      authorNis: (json['user_handle'] as String?)?.replaceAll('@', '') 
+                 ?? json['user_id']?.toString() 
+                 ?? json['nis']?.toString(),
+    );
+  }
 }
 
 class SocialPost {
   final String id;
   final String userName;
   final String userHandle;
-  final String userAvatar; // Initial for avatar
-  final String className; // Kelas User (e.g. "9A")
+  final String? userAvatar; // Can be null
+  final String className;
   final String content;
   final DateTime timestamp;
-  final List<String> taggedClasses; // ["9A", "8B", "OSIS"]
+  final List<String> taggedClasses;
   
   // Interaction Data
   bool isLiked;
-  final List<String> likedBy; // List of names who liked
-  final List<SocialComment> commentsList;
+  int likeCount; // Changed from likedBy list to count
+  int commentCount; // Changed from commentsList to count
+  
+  // Note: Comments are now fetched separately, so we don't store them in the post model for the feed
+  // But for the detail view/modal, we might fetch them. 
+  // For the model used in the list, we keep it simple.
+
+  final String? imageUrl; // New field for post image
+  final String? authorNis; // To identify ownership
 
   SocialPost({
     required this.id,
     required this.userName,
     required this.userHandle,
-    required this.userAvatar,
+    this.userAvatar,
+    this.imageUrl, // Add to constructor
+    this.authorNis,
     required this.className,
     required this.content,
     required this.timestamp,
     this.taggedClasses = const [],
     this.isLiked = false,
-    this.likedBy = const [],
-    this.commentsList = const [],
+    this.likeCount = 0,
+    this.commentCount = 0,
+    this.isEdited = false,
+    this.updatedAt,
+    this.authorType = 'siswa', // Added to constructor
   });
-  
-  int get likeCount => likedBy.length + (isLiked ? 1 : 0); // Self like adjustment
-  int get commentCount => commentsList.length;
 
-  // Dummy Data
-  static List<SocialPost> get dummyPosts {
-    return [
-      SocialPost(
-        id: '1',
-        userName: 'Ahmad Rizki',
-        userHandle: '@ahmad_r',
-        userAvatar: 'AR',
-        className: '9A',
-        content: 'Besok jangan lupa bawa buku paket Matematika ya teman-teman! Ada tugas halaman 45. 📚 #matematika',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-        taggedClasses: ['9A'],
-        likedBy: ['Budi', 'Siti', 'Dewi', 'Rina', 'Joko'],
-        commentsList: [
-          SocialComment(
-            id: 'c1', 
-            userName: 'Budi Santoso', 
-            userAvatar: 'BS', 
-            content: 'Siap, makasih infonya Mad!', 
-            timestamp: DateTime.now().subtract(const Duration(minutes: 2))
-          ),
-          SocialComment(
-            id: 'c2', 
-            userName: 'Siti Aminah', 
-            userAvatar: 'SA', 
-            content: 'Halaman 45 yang bagian B aja kan?', 
-            timestamp: DateTime.now().subtract(const Duration(minutes: 1))
-          ),
-        ],
+  bool isEdited;
+  final DateTime? updatedAt;
+  
+  factory SocialPost.fromJson(Map<String, dynamic> json) {
+    return SocialPost(
+      id: json['id'].toString(),
+      userName: json['user_name'] ?? 'User',
+      userHandle: json['user_handle'] ?? '',
+      authorNis: (json['user_handle'] as String?)?.replaceAll('@', ''), // Extract NIS from handle
+      userAvatar: json['user_avatar'],
+      imageUrl: json['image_url'], // Parse image url
+      className: json['class_name'] ?? '',
+      content: json['content'] ?? '',
+      timestamp: DateTime.tryParse(json['timestamp'] ?? '') ?? DateTime.now(),
+      taggedClasses: json['tagged_classes'] != null 
+          ? List<String>.from(json['tagged_classes']) 
+          : [],
+      isLiked: json['is_liked'] ?? false,
+      likeCount: json['likes_count'] ?? 0,
+      commentCount: json['comments_count'] ?? 0,
+      isEdited: json['is_edited'] ?? (
+        // Fallback: Check if updated_at is significantly different from created_at/timestamp
+        json['updated_at'] != null && json['timestamp'] != null && 
+        json['updated_at'] != json['timestamp']
       ),
-      SocialPost(
-        id: '2',
-        userName: 'Siti Aminah',
-        userHandle: '@siti_aminah',
-        userAvatar: 'SA',
-        className: 'Guru',
-        content: 'Pengumuman untuk kelas 9B, jam ke-3 kita pindah ke Lab Komputer ya. Harap tepat waktu.',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-        taggedClasses: ['9B'],
-        likedBy: ['Andi', 'Rudi', 'Tri', 'Kusuma', 'Putri', 'Mega', 'Bayu', 'Lina'],
-        commentsList: [
-          SocialComment(
-            id: 'c3', 
-            userName: 'Bayu Pradana', 
-            userAvatar: 'BP', 
-            content: 'Baik bu, terima kasih.', 
-            timestamp: DateTime.now().subtract(const Duration(minutes: 50))
-          ),
-        ],
-      ),
-      SocialPost(
-        id: '3',
-        userName: 'OSIS SMPN 1',
-        userHandle: '@osis_spensa',
-        userAvatar: 'OS',
-        className: 'OSIS',
-        content: 'Persiapan HUT Sekolah minggu depan! Rapat panitia nanti sore jam 15.00 di ruang OSIS. Wajib hadir perwakilan kelas! 🇮🇩🎉',
-        timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-        taggedClasses: ['OM', 'PK', '9A', '9B', '8A', '8B', '7A', '7B'],
-        isLiked: true,
-        likedBy: List.generate(45, (index) => 'User $index'), // Dummy bulk likes
-        commentsList: [
-           SocialComment(
-            id: 'c4', 
-            userName: 'Ketua Kelas 9A', 
-            userAvatar: 'KK', 
-            content: 'Siap hadir min!', 
-            timestamp: DateTime.now().subtract(const Duration(hours: 2))
-          ),
-        ],
-      ),
-      SocialPost(
-        id: '4',
-        userName: 'Budi Santoso',
-        userHandle: '@budis',
-        userAvatar: 'BS',
-        className: '8C',
-        content: 'Ada yang nemu tempat pensil warna biru di kantin gak? Isinya pulpen sama tipe-x. 😅',
-        timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-        likedBy: ['Dewi', 'Rina'],
-        commentsList: [],
-      ),
-      SocialPost(
-        id: '5',
-        userName: 'Dewi Lestari',
-        userHandle: '@dewi_l',
-        userAvatar: 'DL',
-        className: '7B',
-        content: 'Seneng banget hari ini praktek IPA berhasil! 🌱',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        isLiked: true,
-        likedBy: ['Siti', 'Budi', 'Ahmad', 'Rina', 'Joko'],
-        commentsList: [
-           SocialComment(
-            id: 'c5', 
-            userName: 'Rina Wati', 
-            userAvatar: 'RW', 
-            content: 'Keren banget Wi! Ajarin dong.', 
-            timestamp: DateTime.now().subtract(const Duration(hours: 20))
-          ),
-        ],
-      ),
-    ];
+      updatedAt: DateTime.tryParse(json['updated_at'] ?? ''),
+      authorType: _parseAuthorType(json),
+    );
+  }
+
+  static String _parseAuthorType(Map<String, dynamic> json) {
+    // 1. Explicit Check from backend
+    if (json['author_type'] != null) {
+      final type = json['author_type'].toString().toLowerCase();
+      if (type == 'guru') return 'guru';
+      if (type == 'siswa') return 'siswa';
+    }
+    
+    // 2. Check if guru_id exists (backend may send this)
+    if (json['guru_id'] != null && json['guru_id'] != 0) {
+      return 'guru';
+    }
+    
+    // 3. Heuristic Check if backend doesn't send author_type
+    final className = json['class_name']?.toString().toLowerCase() ?? '';
+    final handle = (json['user_handle'] as String?)?.replaceAll('@', '') ?? '';
+    
+    // If class_name contains 'guru' keyword
+    if (className.contains('guru')) {
+      return 'guru';
+    }
+    
+    // If handle is NIP format (18 digits typically) - Guru indicator
+    // NIP format: YYYYMMDD YYYYMM X XXX (18 digits)
+    if (handle.length >= 18) {
+      return 'guru';
+    }
+    
+    // If class_name is empty or dash AND handle is longer than typical NIS (5-10 chars)
+    if ((className.isEmpty || className == '-' || className == 'null') && handle.length > 12) {
+      return 'guru';
+    }
+    
+    return 'siswa';
+  }
+
+  // Add field
+  final String authorType;
+  
+  // Fallback dummy for testing if needed
+  static List<SocialPost> get dummyPosts => []; 
+
+  SocialPost copyWith({
+    String? id,
+    String? userName,
+    String? userHandle,
+    String? content,
+    bool? isLiked,
+    int? likeCount,
+    int? commentCount,
+    String? authorType,
+    // Add other fields as needed for copy
+  }) {
+    return SocialPost(
+      id: id ?? this.id,
+      userName: userName ?? this.userName,
+      userHandle: userHandle ?? this.userHandle,
+      userAvatar: userAvatar,
+      imageUrl: imageUrl,
+      authorNis: authorNis,
+      className: className,
+      content: content ?? this.content,
+      timestamp: timestamp,
+      taggedClasses: taggedClasses,
+      isLiked: isLiked ?? this.isLiked,
+      likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
+      isEdited: isEdited,
+      updatedAt: updatedAt,
+      authorType: authorType ?? this.authorType,
+    );
   }
 }
