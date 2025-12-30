@@ -38,6 +38,8 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
   int _lastPage = 1;
   String? _userClassName;
   String? _currentUserNis;
+  String? _userRole;
+  String? _userJabatan;
   
   // Search State
   bool _isSearching = false;
@@ -59,6 +61,8 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
     setState(() {
       _userClassName = prefs.getString('user_class_name');
       _currentUserNis = prefs.getString('user_nis');
+      _userRole = prefs.getString('user_role');
+      _userJabatan = prefs.getString('user_jabatan');
     });
     // Load class feed if we have the class name
     if (_userClassName != null) {
@@ -146,6 +150,19 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
     await _loadTimeline();
   }
 
+  bool _canCreatePost() {
+    // 1. Guru always allowed
+    if (_userRole == 'guru') return true;
+    
+    // 2. Siswa allowed only if KM or OSIS
+    if (_userRole == 'siswa') {
+      final jabatan = _userJabatan?.toUpperCase() ?? '';
+      return jabatan == 'KM' || jabatan == 'OSIS' || jabatan.contains('OSIS'); 
+    }
+    
+    return false; // Default restricted
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -223,14 +240,16 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50], 
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90), 
-        child: FloatingActionButton(
-          onPressed: () => _showCreatePostModal(context),
-          backgroundColor: const Color(0xFF0D47A1),
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      ),
+      floatingActionButton: _canCreatePost() 
+        ? Padding(
+          padding: const EdgeInsets.only(bottom: 90), 
+          child: FloatingActionButton(
+            onPressed: () => _showCreatePostModal(context),
+            backgroundColor: const Color(0xFF0D47A1),
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        )
+        : null,
       body: Column(
         children: [
           // Header
@@ -463,15 +482,7 @@ class _SocialPageState extends State<SocialPage> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.visibility, size: 20),
-              title: Text('Lihat Detail', style: GoogleFonts.plusJakartaSans(fontSize: 14)),
-              onTap: () {
-                Navigator.pop(context);
-                _showPostDetailPopup(context, post);
-              },
-            ),
+
             if (isMyPost) ...[
                ListTile(
                 dense: true,
@@ -750,198 +761,214 @@ class _CreatePostSheetContentState extends State<_CreatePostSheetContent> {
       return null;
     } catch (e) {
       print('Error compressing image: $e');
-      return null; // Return null, original will be used
+      return null; 
     }
   }
 
   @override
   Widget build(BuildContext context) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.9,
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Drag Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: _isPosting ? null : () => Navigator.pop(context),
-                      child: Text(
-                       'Batal', 
-                       style: GoogleFonts.plusJakartaSans(color: Colors.grey[700], fontSize: 16)
-                      ),
-                    ),
-                    Text(
-                      widget.isEditing ? 'Edit Postingan' : 'Buat Postingan',
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    ElevatedButton(
-                      onPressed: _isPosting ? null : _submit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0D47A1),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                        disabledBackgroundColor: const Color(0xFF0D47A1).withOpacity(0.6),
-                      ),
-                      child: _isPosting 
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(
-                             widget.isEditing ? 'Simpan' : 'Posting',
-                             style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: Colors.white)
-                          ),
-                    ),
-                  ],
+                TextButton(
+                  onPressed: _isPosting ? null : () => Navigator.pop(context),
+                  child: Text(
+                   'Batal', 
+                   style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontSize: 16)
+                  ),
                 ),
-                const SizedBox(height: 24),
-                
-                // Profile & Input
-                Expanded( // Use Expanded to allow scrolling or just taking up space
-                 child: SingleChildScrollView(
-                  child: Column(
+                Text(
+                  widget.isEditing ? 'Edit Postingan' : 'Buat Postingan',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                ElevatedButton(
+                  onPressed: _isPosting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D47A1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    elevation: 0,
+                  ),
+                  child: _isPosting 
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(
+                         widget.isEditing ? 'Simpan' : 'Posting',
+                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: Colors.white)
+                      ),
+                ),
+              ],
+            ),
+          ),
+          
+          const Divider(height: 1),
+
+          // Content Area
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.blue,
-                            child: Text('ME', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _textController,
-                              maxLines: null, // Auto expand
-                              style: GoogleFonts.plusJakartaSans(fontSize: 16, height: 1.5),
-                              decoration: InputDecoration.collapsed(
-                                hintText: 'Apa yang sedang terjadi di sekolah?',
-                                hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey[400]),
-                              ),
-                            ),
-                          ),
-                        ],
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.blue[50], // Placeholder avatar
+                        child: Icon(Icons.person, color: Colors.blue[700]),
                       ),
-                      
-                      // Filtered Image Preview
-                      if (_selectedImage != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 16, bottom: 8),
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(_selectedImage!, height: 200, width: double.infinity, fit: BoxFit.cover),
-                              ),
-                              Positioned(
-                                top: 8, right: 8,
-                                child: InkWell(
-                                  onTap: () => setState(() => _selectedImage = null),
-                                  child: Container(
-                                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                    padding: const EdgeInsets.all(4),
-                                    child: const Icon(Icons.close, color: Colors.white, size: 20),
-                                  ),
-                                ),
-                              )
-                            ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _textController,
+                          maxLines: null, 
+                          minLines: 3,
+                          autofocus: true,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 16, height: 1.5, color: Colors.black87),
+                          decoration: InputDecoration.collapsed(
+                            hintText: 'Apa yang sedang terjadi di sekolah?',
+                            hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey[400], fontSize: 16),
                           ),
                         ),
+                      ),
                     ],
                   ),
-                 ),
-                ),
-                
-                const Divider(),
-                
-                // Action Bar (Image + Tags)
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.image_outlined, color: Color(0xFF0D47A1)),
-                      tooltip: 'Tambah Gambar',
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Tag Kelas:',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.grey[800],
+                  
+                  // Image Preview
+                  if (_selectedImage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.file(_selectedImage!, width: double.infinity, fit: BoxFit.cover),
+                          ),
+                          Positioned(
+                            top: 10, right: 10,
+                            child: InkWell(
+                              onTap: () => setState(() => _selectedImage = null),
+                              child: Container(
+                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), shape: BoxShape.circle),
+                                padding: const EdgeInsets.all(8),
+                                child: const Icon(Icons.close, color: Colors.white, size: 20),
+                              ),
+                            ),
+                          )
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  
+                   const SizedBox(height: 24),
 
-                // Selected Tags Display
-                if (_selectedTags.isNotEmpty)
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _selectedTags.map((tag) {
-                      return Chip(
-                        label: Text(tag, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.white)),
-                        backgroundColor: const Color(0xFF0D47A1),
-                        deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white),
-                        onDeleted: () => _removeTag(tag),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        padding: const EdgeInsets.all(4),
-                      );
-                    }).toList(),
-                  ),
-                
-                const SizedBox(height: 8),
-
-                // Search Box
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari & pilih kelas (misal: 7A)...',
-                    hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey[400]),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  ),
-                ),
-
-                // Suggestions List
+                   if (_selectedTags.isNotEmpty) ...[
+                      Text('Tag Kelas:', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _selectedTags.map((tag) {
+                          return Chip(
+                            label: Text(tag, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: const Color(0xFF0D47A1), fontWeight: FontWeight.bold)),
+                            backgroundColor: const Color(0xFFE3F2FD),
+                            deleteIcon: const Icon(Icons.close, size: 16, color: Color(0xFF0D47A1)),
+                            onDeleted: () => _removeTag(tag),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            padding: const EdgeInsets.all(4),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+                   ]
+                ],
+              ),
+            ),
+          ),
+          
+          Divider(height: 1, color: Colors.grey[200]),
+          
+          // Bottom Actions
+          Container(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+            child: Column(
+              children: [
                 if (_filteredTags.isNotEmpty)
                   Container(
-                    height: 120, // Limited height for suggestions
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[200]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    height: 50,
+                    margin: const EdgeInsets.only(bottom: 12),
                     child: ListView.builder(
-                      padding: EdgeInsets.zero,
+                      scrollDirection: Axis.horizontal,
                       itemCount: _filteredTags.length,
                       itemBuilder: (context, index) {
                         final tag = _filteredTags[index];
-                        return ListTile(
-                          title: Text(tag, style: GoogleFonts.plusJakartaSans()),
-                          onTap: () => _addTag(tag),
-                          dense: true,
-                          visualDensity: VisualDensity.compact,
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ActionChip(
+                            label: Text(tag, style: GoogleFonts.plusJakartaSans(color: Colors.black87)),
+                            backgroundColor: Colors.white,
+                            side: BorderSide(color: Colors.grey[300]!),
+                            onPressed: () => _addTag(tag),
+                          ),
                         );
                       },
                     ),
                   ),
-                
-                // Keyboard spacer
-                SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 16),
+
+                Row(
+                  children: [
+                    IconButton(
+                        onPressed: _pickImage,
+                        icon: const Icon(Icons.image_outlined, color: Color(0xFF0D47A1)),
+                        style: IconButton.styleFrom(backgroundColor: const Color(0xFFE3F2FD), padding: const EdgeInsets.all(12)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(24)),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Cari tag kelas (misal: 7A)...',
+                            hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey[500], fontSize: 13),
+                            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-          );
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1036,9 +1063,18 @@ class _CommentsModalState extends State<_CommentsModal> {
               child: _loading 
                 ? const Center(child: CircularProgressIndicator())
                 : _comments.isEmpty 
-                    ? Center(child: Text('Belum ada komentar', style: GoogleFonts.plusJakartaSans(color: Colors.grey)))
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.chat_bubble_outline, size: 40, color: Colors.grey[200]),
+                            const SizedBox(height: 12),
+                            Text('Belum ada komentar', style: GoogleFonts.plusJakartaSans(color: Colors.grey[400], fontSize: 13)),
+                          ],
+                        )
+                      )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
                         itemCount: _comments.length,
                         itemBuilder: (ctx, i) => _buildCommentItem(_comments[i]),
                       ),
@@ -1049,7 +1085,9 @@ class _CommentsModalState extends State<_CommentsModal> {
               padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).viewInsets.bottom + 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))
+                ]
               ),
               child: Row(
                 children: [
@@ -1067,7 +1105,7 @@ class _CommentsModalState extends State<_CommentsModal> {
                           hintStyle: GoogleFonts.plusJakartaSans(color: Colors.grey[500]),
                           border: InputBorder.none,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         style: GoogleFonts.plusJakartaSans(fontSize: 14),
                         minLines: 1,
@@ -1078,7 +1116,7 @@ class _CommentsModalState extends State<_CommentsModal> {
                   const SizedBox(width: 12),
                   Container(
                     decoration: const BoxDecoration(
-                      color: Color(0xFF0D47A1),
+                      gradient: LinearGradient(colors: [Color(0xFF0D47A1), Color(0xFF1976D2)]),
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
@@ -1104,37 +1142,43 @@ class _CommentsModalState extends State<_CommentsModal> {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: Colors.blue[50], 
             child: Text(
                comment.userName.isNotEmpty ? comment.userName[0] : '?',
-               style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[800]),
+               style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue[700]),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      comment.userName,
-                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    const SizedBox(width: 6),
-
-                    Text(
-                      _formatTime(comment.timestamp.toLocal()),
-                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  comment.content,
-                  style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[800], height: 1.4),
-                ),
-              ],
+            child: Container(
+               padding: const EdgeInsets.all(12),
+               decoration: BoxDecoration(
+                 color: Colors.grey[50],
+                 borderRadius: BorderRadius.circular(12),
+               ),
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Row(
+                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                     children: [
+                       Text(
+                         comment.userName,
+                         style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, fontSize: 13),
+                       ),
+                       Text(
+                         _formatTime(comment.timestamp.toLocal()),
+                         style: GoogleFonts.plusJakartaSans(fontSize: 10, color: Colors.grey[400]),
+                       ),
+                     ],
+                   ),
+                   const SizedBox(height: 4),
+                   Text(
+                     comment.content,
+                     style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.black87, height: 1.4),
+                   ),
+                 ],
+               ),
             ),
           ),
         ],

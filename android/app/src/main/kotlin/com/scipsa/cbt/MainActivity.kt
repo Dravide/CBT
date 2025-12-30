@@ -6,10 +6,15 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
+import androidx.core.view.WindowCompat
+
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.scipsa.cbt/app_control"
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Switch to WindowCompat for Edge-to-Edge (works on any Activity)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         super.onCreate(savedInstanceState)
         // Removed global FLAG_SECURE to allow screenshots on Home
         // window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)

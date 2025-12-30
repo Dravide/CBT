@@ -3,6 +3,7 @@ import 'dart:io'; // Added for File
 import 'package:http/http.dart' as http;
 import 'package:cbt_app/models/social_post.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http_parser/http_parser.dart'; // Add this import
 
 class SocialService {
   static const String baseUrl = 'https://digiclass.smpn1cipanas.sch.id/api/social';
@@ -83,7 +84,24 @@ class SocialService {
     }
 
     if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      final String extension = image.path.split('.').last.toLowerCase();
+      MediaType contentType;
+      
+      if (extension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else if (extension == 'webp') {
+        contentType = MediaType('image', 'webp');
+      } else {
+        contentType = MediaType('image', 'jpeg');
+      }
+      
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image', 
+          image.path,
+          contentType: contentType,
+        ),
+      );
     }
 
     var streamedResponse = await request.send();
@@ -119,7 +137,24 @@ class SocialService {
     }
 
     if (image != null) {
-      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      final String extension = image.path.split('.').last.toLowerCase();
+      MediaType contentType;
+      
+      if (extension == 'png') {
+        contentType = MediaType('image', 'png');
+      } else if (extension == 'webp') {
+        contentType = MediaType('image', 'webp');
+      } else {
+        contentType = MediaType('image', 'jpeg');
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image', 
+          image.path,
+          contentType: contentType,
+        ),
+      );
     }
 
     var streamedResponse = await request.send();

@@ -9,6 +9,7 @@ class Siswa {
   final String? keterangan;
   final String? className;
   final int? kelasId;
+  final String? jabatan; // Added field
 
   Siswa({
     required this.id,
@@ -21,6 +22,7 @@ class Siswa {
     this.keterangan,
     this.className,
     this.kelasId,
+    this.jabatan,
   });
 
   factory Siswa.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class Siswa {
       keterangan: json['keterangan'],
       className: clsName,
       kelasId: clsId,
+      jabatan: json['jabatan'], // Added jabatan
     );
   }
 }

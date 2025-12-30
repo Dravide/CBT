@@ -380,21 +380,72 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            // Avatar
+            const SkeletonLoading(width: 100, height: 100, borderRadius: 50),
+            const SizedBox(height: 16),
+            
+            // Name & Role
+            const SkeletonLoading(width: 180, height: 22),
+            const SizedBox(height: 8),
+            const SkeletonLoading(width: 120, height: 16),
+            const SizedBox(height: 8),
+            const SkeletonLoading(width: 80, height: 24),
+            const SizedBox(height: 20),
+            
+            // Action Buttons
             Row(
-              children: [
-                const SkeletonLoading(width: 80, height: 80, borderRadius: 40),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    children: const [
-                      SkeletonLoading(width: 150, height: 20),
-                      SizedBox(height: 8),
-                      SkeletonLoading(width: 100, height: 14),
-                    ],
-                  ),
-                ),
+              children: const [
+                Expanded(child: SkeletonLoading(height: 40)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonLoading(height: 40)),
+                SizedBox(width: 8),
+                SkeletonLoading(width: 40, height: 40),
               ],
             ),
+            const SizedBox(height: 20),
+            
+            // Stats Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: const [
+                _SkeletonStatItem(),
+                _SkeletonStatItem(),
+                _SkeletonStatItem(),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
+            // Tab Bar
+            Row(
+              children: const [
+                Expanded(child: SkeletonLoading(height: 40)),
+                SizedBox(width: 8),
+                Expanded(child: SkeletonLoading(height: 40)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            // Menu Items
+            ...List.generate(5, (index) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: const [
+                  SkeletonLoading(width: 40, height: 40, borderRadius: 10),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonLoading(width: 140, height: 16),
+                        SizedBox(height: 4),
+                        SkeletonLoading(width: 100, height: 12),
+                      ],
+                    ),
+                  ),
+                  SkeletonLoading(width: 20, height: 20),
+                ],
+              ),
+            )),
           ],
         ),
       ),
@@ -613,5 +664,20 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
     return false;
+  }
+}
+
+class _SkeletonStatItem extends StatelessWidget {
+  const _SkeletonStatItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: const [
+        SkeletonLoading(width: 40, height: 20),
+        SizedBox(height: 4),
+        SkeletonLoading(width: 60, height: 14),
+      ],
+    );
   }
 }

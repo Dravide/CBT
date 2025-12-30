@@ -1,6 +1,7 @@
 class Jadwal {
   final int id;
   final String hari;
+  final String semester;
   final int jamKe;
   final String jamMulai;
   final String jamSelesai;
@@ -13,6 +14,7 @@ class Jadwal {
   Jadwal({
     required this.id,
     required this.hari,
+    required this.semester,
     required this.jamKe,
     required this.jamMulai,
     required this.jamSelesai,
@@ -27,6 +29,7 @@ class Jadwal {
     return Jadwal(
       id: json['id'] ?? 0,
       hari: json['hari'] ?? '',
+      semester: json['semester'] ?? 'ganjil',
       jamKe: json['jam_ke'] is int ? json['jam_ke'] : int.tryParse(json['jam_ke'].toString()) ?? 0,
       jamMulai: json['jam_mulai'] ?? '',
       jamSelesai: json['jam_selesai'] ?? '',

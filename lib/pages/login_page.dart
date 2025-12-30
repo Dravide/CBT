@@ -5,8 +5,8 @@ import 'package:cbt_app/home_page.dart';
 import 'package:cbt_app/services/siswa_service.dart';
 import 'package:cbt_app/services/guru_service.dart';
 import 'package:cbt_app/models/guru.dart';
-import 'package:cbt_app/models/siswa.dart'; // Added Siswa Import
-import 'package:cbt_app/widgets/top_snack_bar.dart'; // Added TopSnackBar Import
+import 'package:cbt_app/models/siswa.dart';
+import 'package:cbt_app/widgets/top_snack_bar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -61,6 +61,7 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setInt('user_id', siswaMatch.id);
         if (siswaMatch.kelasId != null) await prefs.setInt('kelas_id', siswaMatch.kelasId!);
         if (siswaMatch.className != null) await prefs.setString('user_class_name', siswaMatch.className!);
+        if (siswaMatch.jabatan != null) await prefs.setString('user_jabatan', siswaMatch.jabatan!);
         
         if (!mounted) return;
         showTopSnackBar(context, 'Login Berhasil sebagai Siswa', backgroundColor: Colors.green);
@@ -71,7 +72,6 @@ class _LoginPageState extends State<LoginPage> {
       // 3. If Not Siswa, Try Login as Guru
       final guruResult = await _guruService.fetchGurus(query: inputId);
       final List<Guru> gurus = guruResult['data'];
-      // Assuming 'nip' is the unique identifier for Guru matching inputId
       final Iterable<Guru> guruMatches = gurus.where((g) => g.nip == inputId);
       
       if (guruMatches.isNotEmpty) {
@@ -79,10 +79,9 @@ class _LoginPageState extends State<LoginPage> {
         // GURU FOUND
         await prefs.setBool('is_logged_in', true);
         await prefs.setString('user_role', 'guru');
-        await prefs.setString('user_nis', guruMatch.nip ?? ''); // Use NIP as NIS identifier
+        await prefs.setString('user_nis', guruMatch.nip ?? '');
         await prefs.setString('user_name', guruMatch.namaGuru);
         await prefs.setInt('user_id', guruMatch.id);
-        // Clean up class specific data if any exists from previous session
         await prefs.remove('kelas_id');
         await prefs.remove('user_class_name');
 
@@ -104,124 +103,167 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FD),
       body: SingleChildScrollView(
-        child: Container(
+        child: SizedBox(
           height: MediaQuery.of(context).size.height,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              // Logo
-               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: Image.asset(
-                  'assets/icon.png',
-                  width: 80,
-                  height: 80,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'SATRIA - LOGIN',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-               Text(
-                'Masuk untuk memulai ujian',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 48),
-
-              // Card Input
+              // Background Header
               Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+                height: MediaQuery.of(context).size.height * 0.5, // Increased Height
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildTextField(
-                      controller: _nisController,
-                      label: 'NIS / NIP',
-                      icon: Icons.person_outline,
-                      inputType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: _tokenController,
-                      label: 'Token Sekolah',
-                      icon: Icons.vpn_key_outlined,
-                      isToken: true,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0D47A1),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+              ),
+              
+              // Content
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 20), // Added top spacing
+                      // Logo Section
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                        elevation: 0,
+                        child: _isLoading 
+                          ? const CircularProgressIndicator(color: Color(0xFF0D47A1))
+                          : Image.asset(
+                              'assets/logo smpn 1 cipanas.png',
+                              width: 80,
+                              height: 80,
+                              errorBuilder: (ctx, err, _) => const Icon(Icons.school_rounded, size: 60, color: Color(0xFF0D47A1)),
+                            ),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : Text(
-                              'Masuk',
+                      
+                      const SizedBox(height: 16), // Reduced Spacing
+                      
+                      Text(
+                        'SATRIA',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      Text(
+                        'Akses Layanan Akademik Sekolah',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 40),
+
+                      // Login Card
+                      Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0D47A1).withOpacity(0.08),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Login Pengguna',
+                              textAlign: TextAlign.center,
                               style: GoogleFonts.plusJakartaSans(
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                color: const Color(0xFF1F2937),
                               ),
                             ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'SMPN 1 Cipanas',
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white60,
-                  fontSize: 12,
+                            const SizedBox(height: 24),
+                            
+                            _buildTextField(
+                              controller: _nisController,
+                              label: 'NIS / NIP',
+                              icon: Icons.person_rounded,
+                              inputType: TextInputType.number,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _tokenController,
+                              label: 'Token Sekolah',
+                              icon: Icons.vpn_key_rounded,
+                              isToken: true,
+                            ),
+                            
+                            const SizedBox(height: 32),
+                            
+                            ElevatedButton(
+                              onPressed: _isLoading ? null : _login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0D47A1),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Text(
+                                      'Masuk Aplikasi',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      Text(
+                        '© ${DateTime.now().year} SMPN 1 Cipanas',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

@@ -9,6 +9,7 @@ import '../services/presensi_service.dart';
 import '../models/presensi_model.dart';
 import '../widgets/custom_page_header.dart'; 
 import 'scan_presensi_page.dart';
+import 'daftar_hadir_page.dart';
 
 class PresensiPage extends StatefulWidget {
   final String? nip; 
@@ -109,6 +110,18 @@ class _PresensiPageState extends State<PresensiPage> {
              title: 'Rekap Presensi', 
              showBackButton: true,
              actions: [
+                // Daftar Hadir Button
+                Container(
+                   margin: const EdgeInsets.only(right: 4),
+                   child: IconButton(
+                     onPressed: () {
+                         Navigator.push(context, MaterialPageRoute(builder: (_) => const DaftarHadirPage()));
+                     },
+                     icon: const Icon(Icons.people_alt_rounded, color: Color(0xFF0D47A1)),
+                     tooltip: 'Daftar Hadir Hari Ini',
+                   ),
+                ),
+                // Camera Button
                 Container(
                    margin: const EdgeInsets.only(right: 8),
                    child: IconButton(
@@ -119,8 +132,8 @@ class _PresensiPageState extends State<PresensiPage> {
                          );
                          if (result == true) _initData();
                      },
-                     icon: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF0D47A1)),
-                     tooltip: 'Scan Kehadiran',
+                     icon: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0D47A1)),
+                     tooltip: 'Foto Presensi',
                    ),
                 )
              ],

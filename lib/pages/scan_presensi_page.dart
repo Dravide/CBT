@@ -3,11 +3,13 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/presensi_service.dart';
+import 'presensi_success_page.dart';
+import 'daftar_hadir_page.dart';
+import 'selfie_camera_page.dart';
 
 class ScanPresensiPage extends StatefulWidget {
   const ScanPresensiPage({Key? key}) : super(key: key);
@@ -16,24 +18,29 @@ class ScanPresensiPage extends StatefulWidget {
   State<ScanPresensiPage> createState() => _ScanPresensiPageState();
 }
 
-class _ScanPresensiPageState extends State<ScanPresensiPage> with SingleTickerProviderStateMixin {
-  // Service
+class _ScanPresensiPageState extends State<ScanPresensiPage> {
   final PresensiService _service = PresensiService();
   
-  // State
   bool _isLoading = true;
-  String _statusMessage = 'Mendeteksi Jadwal...';
+  String _statusMessage = 'Mendeteksi Status...';
   
   Map<String, dynamic>? _autoDetectData;
-  String? _scanErrorMessage;
+  String? _errorMessage;
   
-  // Logic Flow
-  bool _showScanner = false;
-  MobileScannerController? _scannerController;
+  // Status flags
+  bool _canCheckin = false;
+  bool _canCheckout = false;
+  String _jenisPresensi = 'masuk';
+  bool _noScheduleToday = false;
   
-  // Final Data
-  String? _qrCode;
+  // Already attended flags
+  bool _hasCheckedInToday = false;
+  bool _hasCheckedOutToday = false;
+  String? _checkinTime;
+  String? _checkoutTime;
+  
   File? _selfieFile;
+  bool _isTakingSelfie = false;
 
   @override
   void initState() {
@@ -41,132 +48,194 @@ class _ScanPresensiPageState extends State<ScanPresensiPage> with SingleTickerPr
     _startAutoDetect();
   }
 
-  @override
-  void dispose() {
-    _scannerController?.dispose();
-    super.dispose();
-  }
-
-  // --- LOGIC ---
-
   Future<void> _startAutoDetect() async {
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Sinkronisasi Server...';
+      _statusMessage = 'Sinkronisasi dengan Server...';
+      _errorMessage = null;
     });
 
     try {
+      // Fetch auto-detect status
       final res = await _service.autoDetectPresensi();
-      final data = res['data'];
+      final dynamic rawData = res['data'];
+      final Map<String, dynamic> data = (rawData is Map<String, dynamic>) ? rawData : {};
       
-      setState(() {
-         _autoDetectData = data;
-         _isLoading = false;
-         
-         // Start Scanner immediately if allowed
-         if (data['can_checkin'] == true || data['can_checkout'] == true) {
-             _initScanner();
-         } else {
-             _scanErrorMessage = "Presensi Ditutup\n(${data['message'] ?? 'Di luar jadwal'})";
-         }
-      });
+      // Also fetch today's attendance to check if already attended
+      List<dynamic> todayData = [];
+      try {
+        final result = await _service.getDailyAttendance();
+        if (result is List) {
+          todayData = result;
+        }
+      } catch (_) {
+        // Silent fail - todayData remains empty
+      }
+      
+      // Get current user NIP to filter
+      final prefs = await SharedPreferences.getInstance(); 
+      final currentNip = prefs.getString('user_nis') ?? '';
+      
+      // Check if current user already has masuk/pulang today
+      bool hasCheckedInToday = false;
+      bool hasCheckedOutToday = false;
+      String? checkinTime;
+      String? checkoutTime;
+      
+      for (var item in todayData) {
+        if (item is! Map) continue;
+        
+        final userEmail = item['user_email']?.toString() ?? '';
+        final userName = item['user_name']?.toString() ?? '';
+        // Match by checking if NIP is part of email or name contains current user
+        if (userEmail.contains(currentNip) || userName.toUpperCase().contains(currentNip.toUpperCase()) || item['user_id']?.toString() == currentNip) {
+          final jenis = item['jenis_presensi']?.toString().toLowerCase() ?? '';
+          
+          // Safe waktu extraction
+          String waktu = '';
+          final rawWaktu = item['waktu_presensi']?.toString() ?? '';
+          if (rawWaktu.isNotEmpty) {
+            final parts = rawWaktu.split(' ');
+            final timePart = parts.isNotEmpty ? parts.last : rawWaktu;
+            waktu = timePart.length >= 5 ? timePart.substring(0, 5) : timePart;
+          }
+          
+          if (jenis == 'masuk') {
+            hasCheckedInToday = true;
+            checkinTime = waktu;
+          } else if (jenis == 'pulang') {
+            hasCheckedOutToday = true;
+            checkoutTime = waktu;
+          }
+        }
+      }
+      
+      if (mounted) {
+        // Determine if there's no schedule today
+        final canCI = data['can_checkin'] == true;
+        final canCO = data['can_checkout'] == true;
+        final hasJamSetting = data['jam_setting'] is Map && (data['jam_setting'] as Map).isNotEmpty;
+        
+        setState(() {
+           _autoDetectData = data;
+           _canCheckin = canCI;
+           _canCheckout = canCO;
+           _jenisPresensi = data['jenis_presensi']?.toString() ?? 'masuk';
+           _noScheduleToday = !canCI && !canCO && !hasJamSetting;
+           _hasCheckedInToday = hasCheckedInToday;
+           _hasCheckedOutToday = hasCheckedOutToday;
+           _checkinTime = checkinTime;
+           _checkoutTime = checkoutTime;
+           _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
            _isLoading = false;
-           _scanErrorMessage = "Gagal Terhubung\nPeriksa koneksi internet Anda";
+           _errorMessage = "Gagal Terhubung\nPeriksa koneksi internet Anda";
         });
       }
     }
   }
 
-  void _initScanner() {
-     _scannerController = MobileScannerController(
-        detectionSpeed: DetectionSpeed.normal,
-        facing: CameraFacing.back,
-        torchEnabled: false,
-     );
-     setState(() {
-       _showScanner = true;
-       _statusMessage = 'Arahkan QR Code ke dalam kotak';
-     });
-  }
-
-  Future<void> _onQrDetected(BarcodeCapture capture) async {
-      final List<Barcode> barcodes = capture.barcodes;
-      if (barcodes.isEmpty) return;
-      
-      final String? code = barcodes.first.rawValue;
-      if (code == null || _qrCode != null) return; 
-
-      if (!code.startsWith('rglb-')) {
-          _showToast('QR Code tidak valid!', isError: true);
-          return;
-      }
-      
-      // Stop scanner
-      _scannerController?.stop();
-      setState(() {
-         _qrCode = code;
-         _showScanner = false;
-         _statusMessage = 'Verifikasi Wajah...';
-      });
-
-      // Proceed to Selfie
-      await _takeSelfie();
-  }
-  
   Future<void> _takeSelfie() async {
-    try {
-       final ImagePicker picker = ImagePicker();
-       // Use Front Camera
-       final XFile? photo = await picker.pickImage(
-          source: ImageSource.camera, 
-          preferredCameraDevice: CameraDevice.front,
-          imageQuality: 50,
-       );
-
-       if (photo != null) {
-          _selfieFile = File(photo.path);
-          _submitPresensi();
-       } else {
-          // User cancelled selfie -> Reset
-          setState(() {
-             _qrCode = null;
-             _initScanner();
-          });
-       }
-    } catch (e) {
-       _showToast("Gagal membuka kamera", isError: true);
-    }
+    // Navigate to custom camera page with face detection
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => SelfieCameraPage(
+          jenisPresensi: _jenisPresensi,
+          autoDetectData: _autoDetectData,
+        ),
+      ),
+    );
   }
 
   Future<void> _submitPresensi() async {
-     if (_qrCode == null || _selfieFile == null) return;
+     if (_selfieFile == null) return;
      
      setState(() {
         _isLoading = true;
-        _statusMessage = 'Mengupload Data...';
+        _statusMessage = 'Mengupload Data Presensi...';
      });
      
      try {
+       final prefs = await SharedPreferences.getInstance(); 
+       final nip = prefs.getString('user_nis'); 
+       
+       if (nip == null) throw Exception("NIP tidak ditemukan. Silakan login ulang.");
+
        List<int> imageBytes = await _selfieFile!.readAsBytes();
        String base64Image = "data:image/jpeg;base64,${base64Encode(imageBytes)}";
 
-       await _service.processPresensi(
-           qrCode: _qrCode!,
-           jenisPresensi: _autoDetectData?['jenis_presensi'] ?? 'masuk',
+       final result = await _service.processPresensiByNip(
+           nip: nip,
+           jenisPresensi: _jenisPresensi,
            base64Image: base64Image,
-           locationCode: 'rglb-00b-h8eud836rt7' 
+           locationCode: 'rglb-00b-h8eud836rt7',
+           latitude: -6.728338615118334,
+           longitude: 107.03671141098333, 
        );
         
-       if (mounted) _showSuccessDialog();
+       if (mounted) {
+         // Extract waktu from response (try multiple field names)
+         String waktuResult = result['data']?['waktu_presensi'] ?? result['data']?['waktu'] ?? 'N/A';
+         if (waktuResult.contains(' ')) waktuResult = waktuResult.split(' ').last.substring(0, 5);
+         
+         Navigator.of(context).pushReplacement(
+           MaterialPageRoute(
+             builder: (_) => PresensiSuccessPage(
+               jenisPresensi: _jenisPresensi,
+               userName: result['data']?['user_name'],
+               waktu: waktuResult,
+               status: (result['data']?['is_terlambat'] == true) ? 'Terlambat' : (result['data']?['status'] ?? 'Tercatat'),
+             ),
+           ),
+         );
+       }
 
      } catch (e) {
         if (mounted) {
+           final errorStr = e.toString().toLowerCase();
+           String friendlyTitle;
+           String friendlyMessage;
+           IconData friendlyIcon;
+           MaterialColor friendlyColor;
+           
+           // Detect common error types
+           if (errorStr.contains('tunggu') || errorStr.contains('menit') || errorStr.contains('detik')) {
+             // Rate limiting error
+             friendlyTitle = 'Harap Tunggu';
+             friendlyMessage = 'Anda baru saja melakukan presensi.\nTunggu beberapa menit sebelum mencoba lagi.';
+             friendlyIcon = Icons.hourglass_top_rounded;
+             friendlyColor = Colors.orange;
+           } else if (errorStr.contains('sudah') || errorStr.contains('already') || errorStr.contains('duplicate')) {
+             // Already attended error
+             friendlyTitle = 'Sudah Presensi';
+             friendlyMessage = 'Anda sudah melakukan presensi ${_jenisPresensi} hari ini.';
+             friendlyIcon = Icons.info_outline_rounded;
+             friendlyColor = Colors.blue;
+           } else if (errorStr.contains('tidak ditemukan') || errorStr.contains('not found')) {
+             // User not found
+             friendlyTitle = 'Data Tidak Ditemukan';
+             friendlyMessage = 'NIP Anda tidak terdaftar di sistem.\nHubungi admin untuk bantuan.';
+             friendlyIcon = Icons.person_off_rounded;
+             friendlyColor = Colors.red;
+           } else {
+             // Generic error
+             friendlyTitle = 'Gagal Mengirim Data';
+             friendlyMessage = e.toString().replaceAll('Exception:', '').trim();
+             friendlyIcon = Icons.error_outline_rounded;
+             friendlyColor = Colors.red;
+           }
+           
+           // Show friendly dialog instead of raw error
+           _showFriendlyErrorDialog(friendlyTitle, friendlyMessage, friendlyIcon, friendlyColor);
+           
            setState(() {
               _isLoading = false;
-              _scanErrorMessage = "Gagal Mengirim Data\n$e";
+              _isTakingSelfie = false;
+              // Don't set _errorMessage, we show dialog instead
            });
         }
      }
@@ -182,261 +251,424 @@ class _ScanPresensiPageState extends State<ScanPresensiPage> with SingleTickerPr
       );
   }
 
-  void _showSuccessDialog() {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
-                  child: Icon(Icons.check_rounded, color: Colors.green[600], size: 40),
-                ),
-                const SizedBox(height: 20),
-                Text('Scan Berhasil!', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 20)),
-                const SizedBox(height: 8),
-                Text(
-                  'Presensi ${_autoDetectData?['jenis_presensi']?.toUpperCase()} telah tercatat.', 
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.plusJakartaSans(color: Colors.grey[600])
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop(); 
-                      Navigator.of(context).pop(true);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[800],
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14)
-                    ),
-                    child: Text('Selesai', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+  void _showFriendlyErrorDialog(String title, String message, IconData icon, MaterialColor color) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(color: color[50], shape: BoxShape.circle),
+                child: Icon(icon, color: color[600], size: 40),
+              ),
+              const SizedBox(height: 20),
+              Text(title, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18)),
+              const SizedBox(height: 12),
+              Text(
+                message, 
+                textAlign: TextAlign.center,
+                style: GoogleFonts.plusJakartaSans(color: Colors.grey[600], fontSize: 14)
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    // Reload status to refresh attendance data
+                    _startAutoDetect();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color[700],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 14)
                   ),
-                )
-              ],
-            ),
+                  child: Text('Mengerti', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const DaftarHadirPage()));
+                },
+                child: Text('Lihat Daftar Hadir', style: GoogleFonts.plusJakartaSans(color: Colors.grey[600])),
+              )
+            ],
           ),
         ),
-      );
-  }
-
-  // --- UI ---
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-           // 1. CONTENT LAYER
-           if (_showScanner)
-              MobileScanner(
-                 controller: _scannerController!,
-                 onDetect: _onQrDetected,
-              )
-           else
-              Container(color: Colors.black), // Placeholder for loading/error
-
-           // 2. OVERLAY (Focus Frame)
-           if (_showScanner)
-             _buildScanOverlay(),
-
-           // 3. TOP BAR
-           Positioned(
-             top: 0, left: 0, right: 0,
-             child: _buildTopBar(),
-           ),
-
-           // 4. BOTTOM STATUS / ERROR
-           if (_isLoading)
-              _buildLoadingOverlay()
-           else if (_scanErrorMessage != null)
-              _buildErrorOverlay()
-           else if (_showScanner)
-              _buildBottomInstruction()
-        ],
       ),
     );
   }
 
-  Widget _buildTopBar() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
           children: [
-             GestureDetector(
-               onTap: () => Navigator.pop(context),
-               child: Container(
-                 padding: const EdgeInsets.all(10),
-                 decoration: BoxDecoration(
-                   color: Colors.black45,
-                   borderRadius: BorderRadius.circular(12),
-                   border: Border.all(color: Colors.white24)
-                 ),
-                 child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
-               ),
-             ),
-             const SizedBox(width: 16),
-             Expanded(
-               child: Text(
-                 'Scan QR Presensi',
-                 style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, shadows: [Shadow(color: Colors.black54, blurRadius: 10)])
-               ),
-             ),
-             // Optional Torch Toggle could go here
+            _buildTopBar(),
+            Expanded(
+              child: _isLoading 
+                  ? _buildLoadingContent()
+                  : _errorMessage != null 
+                      ? _buildErrorContent()
+                      : _buildStatusContent(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildScanOverlay() {
-    return Stack(
-      children: [
-         ColorFiltered(
-            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.6), BlendMode.srcOut),
-            child: Stack(
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+           GestureDetector(
+             onTap: () => Navigator.pop(context),
+             child: Container(
+               padding: const EdgeInsets.all(10),
+               decoration: BoxDecoration(
+                 color: Colors.white,
+                 borderRadius: BorderRadius.circular(12),
+                 border: Border.all(color: Colors.grey[200]!),
+                 boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)]
+               ),
+               child: Icon(Icons.arrow_back_rounded, color: Colors.blue[800], size: 24),
+             ),
+           ),
+           const SizedBox(width: 16),
+           Expanded(
+             child: Text(
+               'Presensi',
+               style: GoogleFonts.plusJakartaSans(color: Colors.blue[800], fontWeight: FontWeight.bold, fontSize: 18)
+             ),
+           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingContent() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+           const CircularProgressIndicator(color: Colors.blue),
+           const SizedBox(height: 24),
+           Text(_statusMessage, style: GoogleFonts.plusJakartaSans(fontSize: 16, color: Colors.grey[700]))
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorContent() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+              Container(
+                 padding: const EdgeInsets.all(20),
+                 decoration: BoxDecoration(color: Colors.red[50], shape: BoxShape.circle),
+                 child: Icon(Icons.warning_amber_rounded, size: 40, color: Colors.red[400]),
+              ),
+              const SizedBox(height: 20),
+              Text(_errorMessage!, textAlign: TextAlign.center, style: GoogleFonts.plusJakartaSans(color: Colors.grey[800], fontSize: 16)),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                 onPressed: _startAutoDetect,
+                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[800]),
+                 child: const Text('Coba Lagi'),
+              )
+           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusContent() {
+    // Determine if user can do attendance:
+    // 1. Time must allow it (_canCheckin/_canCheckout)
+    // 2. User must NOT have already done it for this jenis today
+    final bool alreadyDoneForThisType = (_jenisPresensi == 'masuk' && _hasCheckedInToday) || 
+                                         (_jenisPresensi == 'pulang' && _hasCheckedOutToday);
+    final bool canDoPresensi = ((_jenisPresensi == 'masuk' && _canCheckin) || (_jenisPresensi == 'pulang' && _canCheckout)) 
+                               && !alreadyDoneForThisType;
+    
+    // Safe access for current_time
+    String currentTime = '--:--';
+    final rawCurrentTime = _autoDetectData?['current_time'];
+    if (rawCurrentTime is String && rawCurrentTime.contains(' ')) {
+      currentTime = rawCurrentTime.split(' ').last;
+    } else if (rawCurrentTime is String) {
+      currentTime = rawCurrentTime;
+    }
+    
+    // Safe access for jam_setting (might be Map or something else)
+    String jamSetting = '-';
+    final rawJamSetting = _autoDetectData?['jam_setting'];
+    if (rawJamSetting is Map) {
+      final jamKey = _jenisPresensi == 'masuk' ? 'jam_masuk' : 'jam_pulang';
+      jamSetting = rawJamSetting[jamKey]?.toString() ?? '-';
+    }
+    
+    final String validationMessage = _autoDetectData?['validation_message']?.toString() ?? '';
+
+    // Determine display state
+    MaterialColor primaryColor;
+    IconData statusIcon;
+    String statusTitle;
+    String statusSubtitle;
+    
+    if (_noScheduleToday) {
+      // No schedule - ORANGE warning state
+      primaryColor = Colors.orange;
+      statusIcon = Icons.event_busy_rounded;
+      statusTitle = 'Tidak Ada Jadwal Presensi';
+      statusSubtitle = 'Tidak ada jadwal presensi untuk hari ini';
+    } else if (alreadyDoneForThisType) {
+      // Already attended - GREEN SUCCESS state
+      primaryColor = Colors.green;
+      statusIcon = Icons.check_circle_rounded;
+      statusTitle = 'Presensi ${_jenisPresensi.toUpperCase()} Selesai!';
+      statusSubtitle = 'Anda sudah melakukan presensi hari ini';
+    } else if (canDoPresensi) {
+      // Can attend - BLUE state
+      primaryColor = Colors.blue;
+      statusIcon = _jenisPresensi == 'masuk' ? Icons.login_rounded : Icons.logout_rounded;
+      statusTitle = 'Presensi ${_jenisPresensi.toUpperCase()}';
+      statusSubtitle = validationMessage;
+    } else {
+      // Cannot attend - GREY state
+      primaryColor = Colors.grey;
+      statusIcon = Icons.schedule_rounded;
+      statusTitle = 'Presensi ${_jenisPresensi.toUpperCase()}';
+      statusSubtitle = validationMessage.isNotEmpty ? validationMessage : 'Di luar jadwal presensi';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const Spacer(),
+          
+          // Status Icon - Now changes based on state
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryColor.shade400, primaryColor.shade700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withOpacity(0.3),
+                  blurRadius: 25,
+                  spreadRadius: 8,
+                )
+              ],
+            ),
+            child: Icon(statusIcon, color: Colors.white, size: 56),
+          ),
+          
+          const SizedBox(height: 28),
+          
+          Text(
+            statusTitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.grey[900]),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          Text(
+            statusSubtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(fontSize: 14, color: primaryColor.shade700),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Info Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
               children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.transparent,
-                    backgroundBlendMode: BlendMode.dstOut,
-                  ),
-                ),
-                Center(
-                  child: Container(
-                    width: 280,
-                    height: 280,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
+                _buildInfoRow(Icons.access_time, 'Waktu Sekarang', currentTime),
+                const SizedBox(height: 16),
+                _buildInfoRow(Icons.schedule, 'Jam ${_jenisPresensi.toUpperCase()}', jamSetting),
+                const SizedBox(height: 16),
+                _buildInfoRow(
+                  canDoPresensi ? Icons.check_circle : Icons.info,
+                  'Status',
+                  canDoPresensi ? 'Bisa Presensi' : 'Tidak Bisa Presensi',
+                  valueColor: canDoPresensi ? Colors.green[700] : Colors.orange[700],
                 ),
               ],
             ),
-         ),
-         Center(
-           child: Container(
-             width: 280, 
-             height: 280,
-             decoration: BoxDecoration(
-               borderRadius: BorderRadius.circular(24),
-               border: Border.all(color: Colors.blueAccent, width: 3),
-               boxShadow: [
-                  BoxShadow(color: Colors.blueAccent.withOpacity(0.4), blurRadius: 20, spreadRadius: 5)
-               ]
-             ),
-           ),
-         ),
-         // Corner Accents
-         Center(
-            child: SizedBox(
-               width: 260, height: 260,
-               child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                     Icon(Icons.qr_code_2_rounded, size: 48, color: Colors.white.withOpacity(0.9)),
-                     const SizedBox(height: 8),
-                     Text('RGLB', style: GoogleFonts.spaceMono(color: Colors.white70, fontSize: 12, letterSpacing: 4))
-                  ],
-               ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Already Attended Card
+          if (_hasCheckedInToday || _hasCheckedOutToday)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.verified_rounded, color: Colors.green[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text('Presensi Hari Ini', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold, color: Colors.green[800])),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_hasCheckedInToday)
+                    _buildAttendanceChip('MASUK', _checkinTime ?? '-', Colors.blue),
+                  if (_hasCheckedInToday && _hasCheckedOutToday)
+                    const SizedBox(height: 8),
+                  if (_hasCheckedOutToday)
+                    _buildAttendanceChip('PULANG', _checkoutTime ?? '-', Colors.orange),
+                ],
+              ),
             ),
-         )
+          
+          const Spacer(),
+          
+          // Action Buttons
+          if (canDoPresensi)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isTakingSelfie ? null : _takeSelfie,
+                icon: _isTakingSelfie 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.camera_alt_rounded),
+                label: Text(_isTakingSelfie ? 'Membuka Kamera...' : 'Ambil Foto Selfie', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[800],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const DaftarHadirPage()));
+                },
+                icon: const Icon(Icons.people_alt_rounded),
+                label: Text('Lihat Daftar Hadir', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          
+          const SizedBox(height: 12),
+          
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Kembali', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.grey[700],
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: BorderSide(color: Colors.grey[300]!),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value, {Color? valueColor}) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: Colors.blue[700], size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[500])),
+              Text(
+                value,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildBottomInstruction() {
-     return Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-           margin: const EdgeInsets.only(bottom: 50, left: 24, right: 24),
-           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-           decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white12)
-           ),
-           child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                 Text(
-                    'Jadwal: ${(_autoDetectData?['jenis_presensi'] ?? '').toUpperCase()}',
-                    style: GoogleFonts.plusJakartaSans(color: Colors.blue[300], fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.5)
-                 ),
-                 const SizedBox(height: 8),
-                 Text(
-                    _statusMessage, 
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)
-                 ),
-              ],
-           ),
+  Widget _buildAttendanceChip(String label, String time, MaterialColor color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color[50],
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold, color: color[700])),
         ),
-     );
-  }
-
-  Widget _buildLoadingOverlay() {
-      return Container(
-         color: Colors.black.withOpacity(0.7),
-         child: Center(
-            child: Column(
-               mainAxisSize: MainAxisSize.min,
-               children: [
-                  const CircularProgressIndicator(color: Colors.white),
-                  const SizedBox(height: 20),
-                  Text(_statusMessage, style: GoogleFonts.plusJakartaSans(color: Colors.white))
-               ],
-            ),
-         ),
-      );
-  }
-
-  Widget _buildErrorOverlay() {
-      return Center(
-         child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-               mainAxisSize: MainAxisSize.min,
-               children: [
-                  Container(
-                     padding: const EdgeInsets.all(20),
-                     decoration: BoxDecoration(color: Colors.white10, shape: BoxShape.circle),
-                     child: Icon(Icons.warning_amber_rounded, size: 40, color: Colors.amber[400]),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                     _scanErrorMessage!, 
-                     textAlign: TextAlign.center,
-                     style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 16)
-                  ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                     onPressed: () {
-                        setState(() { _scanErrorMessage = null; });
-                        _startAutoDetect();
-                     },
-                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black
-                     ),
-                     child: const Text('Coba Lagi'),
-                  )
-               ],
-            ),
-         ),
-      );
+        const SizedBox(width: 12),
+        Icon(Icons.check_circle, color: Colors.green[600], size: 16),
+        const SizedBox(width: 4),
+        Text('Tercatat pukul $time', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: Colors.grey[700])),
+      ],
+    );
   }
 }

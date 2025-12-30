@@ -1,0 +1,594 @@
+[
+  {
+    "id": "9-H",
+    "label": "9H",
+    "top": 0.175,
+    "left": 0.105,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-G",
+    "label": "9G",
+    "top": 0.175,
+    "left": 0.155,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-I",
+    "label": "9I",
+    "top": 0.175,
+    "left": 0.255,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-J",
+    "label": "9J",
+    "top": 0.175,
+    "left": 0.305,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-K",
+    "label": "9K",
+    "top": 0.175,
+    "left": 0.355,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "8-A",
+    "label": "8A",
+    "top": 0.175,
+    "left": 0.49,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "8-B",
+    "label": "8B",
+    "top": 0.175,
+    "left": 0.54,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "WC-ATAS-1",
+    "label": "WC",
+    "top": 0.135,
+    "left": 0.62,
+    "width": 0.03,
+    "height": 0.025
+  },
+  {
+    "id": "8-C",
+    "label": "8C",
+    "top": 0.175,
+    "left": 0.66,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "8-D",
+    "label": "8D",
+    "top": 0.175,
+    "left": 0.71,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "R-DINAS",
+    "label": "R. Dinas",
+    "top": 0.125,
+    "left": 0.79,
+    "width": 0.025,
+    "height": 0.04
+  },
+  {
+    "id": "WC-ATAS-2",
+    "label": "WC",
+    "top": 0.13,
+    "left": 0.875,
+    "width": 0.03,
+    "height": 0.025
+  },
+  {
+    "id": "8-E",
+    "label": "8E",
+    "top": 0.175,
+    "left": 0.825,
+    "width": 0.045,
+    "height": 0.06
+  },
+  {
+    "id": "9-F",
+    "label": "9F",
+    "top": 0.23,
+    "left": 0.155,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "LAB-KOM",
+    "label": "Lab Kom",
+    "top": 0.235,
+    "left": 0.51,
+    "width": 0.075,
+    "height": 0.05
+  },
+  {
+    "id": "8-H",
+    "label": "8H",
+    "top": 0.235,
+    "left": 0.65,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "8-G",
+    "label": "8G",
+    "top": 0.235,
+    "left": 0.71,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "8-F",
+    "label": "8F",
+    "top": 0.235,
+    "left": 0.825,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-E",
+    "label": "9E",
+    "top": 0.285,
+    "left": 0.155,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-D",
+    "label": "9D",
+    "top": 0.29,
+    "left": 0.255,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-C",
+    "label": "9C",
+    "top": 0.29,
+    "left": 0.31,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "R-OPS",
+    "label": "R. OPS",
+    "top": 0.28,
+    "left": 0.42,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "GUDANG",
+    "label": "Gudang",
+    "top": 0.33,
+    "left": 0.42,
+    "width": 0.05,
+    "height": 0.035
+  },
+  {
+    "id": "MEDIA-CENTER",
+    "label": "Media Ctr",
+    "top": 0.29,
+    "left": 0.52,
+    "width": 0.11,
+    "height": 0.045
+  },
+  {
+    "id": "MASJID",
+    "label": "Mesjid",
+    "top": 0.3,
+    "left": 0.7,
+    "width": 0.08,
+    "height": 0.06
+  },
+  {
+    "id": "KANTIN-ATAS",
+    "label": "Kantin",
+    "top": 0.28,
+    "left": 0.87,
+    "width": 0.035,
+    "height": 0.02
+  },
+  {
+    "id": "TOILET-KANAN",
+    "label": "Toilet",
+    "top": 0.305,
+    "left": 0.86,
+    "width": 0.05,
+    "height": 0.035
+  },
+  {
+    "id": "PERPUSTAKAAN",
+    "label": "Perpus",
+    "top": 0.355,
+    "left": 0.19,
+    "width": 0.08,
+    "height": 0.045
+  },
+  {
+    "id": "9-B",
+    "label": "9B",
+    "top": 0.35,
+    "left": 0.335,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "9-A",
+    "label": "9A",
+    "top": 0.4,
+    "left": 0.335,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "AULA",
+    "label": "Aula",
+    "top": 0.4,
+    "left": 0.105,
+    "width": 0.215,
+    "height": 0.08
+  },
+  {
+    "id": "WC-OSIS",
+    "label": "WC",
+    "top": 0.45,
+    "left": 0.335,
+    "width": 0.045,
+    "height": 0.015
+  },
+  {
+    "id": "R-OSIS",
+    "label": "OSIS",
+    "top": 0.465,
+    "left": 0.335,
+    "width": 0.045,
+    "height": 0.02
+  },
+  {
+    "id": "R-GURU-PUSAT",
+    "label": "R. Guru",
+    "top": 0.4,
+    "left": 0.435,
+    "width": 0.11,
+    "height": 0.04
+  },
+  {
+    "id": "R-KURIKULUM",
+    "label": "R. Kurikulum",
+    "top": 0.4,
+    "left": 0.555,
+    "width": 0.06,
+    "height": 0.04
+  },
+  {
+    "id": "8-K",
+    "label": "8K",
+    "top": 0.4,
+    "left": 0.66,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "R-PASSUS",
+    "label": "R. PASSUS",
+    "top": 0.4,
+    "left": 0.71,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "GUDANG-BARU",
+    "label": "Gudang",
+    "top": 0.4,
+    "left": 0.76,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "8-I",
+    "label": "8I",
+    "top": 0.35,
+    "left": 0.885,
+    "width": 0.045,
+    "height": 0.045
+  },
+  {
+    "id": "8-J",
+    "label": "8J",
+    "top": 0.395,
+    "left": 0.885,
+    "width": 0.045,
+    "height": 0.045
+  },
+  {
+    "id": "R-TU",
+    "label": "Ruang TU",
+    "top": 0.45,
+    "left": 0.59,
+    "width": 0.045,
+    "height": 0.035
+  },
+  {
+    "id": "R-KS",
+    "label": "Ruang KS",
+    "top": 0.49,
+    "left": 0.59,
+    "width": 0.045,
+    "height": 0.03
+  },
+  {
+    "id": "LAB-IPA-BIO",
+    "label": "Lab IPA Biologi",
+    "top": 0.465,
+    "left": 0.74,
+    "width": 0.08,
+    "height": 0.045
+  },
+  {
+    "id": "KANTIN-BARU",
+    "label": "Kantin",
+    "top": 0.47,
+    "left": 0.825,
+    "width": 0.045,
+    "height": 0.045
+  },
+  {
+    "id": "DINAS-RUMAH",
+    "label": "Rmh Dinas",
+    "top": 0.48,
+    "left": 0.875,
+    "width": 0.04,
+    "height": 0.045
+  },
+  {
+    "id": "PANGGUNG",
+    "label": "Panggung",
+    "top": 0.495,
+    "left": 0.505,
+    "width": 0.045,
+    "height": 0.06
+  },
+  {
+    "id": "LAPANGAN",
+    "label": "Lapangan Basket",
+    "top": 0.5,
+    "left": 0.11,
+    "width": 0.21,
+    "height": 0.09
+  },
+  {
+    "id": "LAPANGAN-VOLLY",
+    "label": "Lap. Volly",
+    "top": 0.5,
+    "left": 0.33,
+    "width": 0.165,
+    "height": 0.09
+  },
+  {
+    "id": "JALAN-RAYA-HOR",
+    "label": "Jalan Raya",
+    "top": 0.65,
+    "left": 0.11,
+    "width": 0.51,
+    "height": 0.05
+  },
+  {
+    "id": "JALAN-RAYA-VER",
+    "label": "Jalan Raya",
+    "top": 0.65,
+    "left": 0.62,
+    "width": 0.05,
+    "height": 0.3
+  },
+  {
+    "id": "R-PRAMUKA",
+    "label": "Pramuka",
+    "top": 0.58,
+    "left": 0.54,
+    "width": 0.055,
+    "height": 0.035
+  },
+  {
+    "id": "KOPERASI",
+    "label": "Koperasi",
+    "top": 0.57,
+    "left": 0.73,
+    "width": 0.025,
+    "height": 0.04
+  },
+  {
+    "id": "PMR-UKS",
+    "label": "UKS",
+    "top": 0.575,
+    "left": 0.765,
+    "width": 0.05,
+    "height": 0.035
+  },
+  {
+    "id": "KONSELING",
+    "label": "BK",
+    "top": 0.575,
+    "left": 0.825,
+    "width": 0.05,
+    "height": 0.035
+  },
+  {
+    "id": "7-B",
+    "label": "7B",
+    "top": 0.73,
+    "left": 0.14,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-C",
+    "label": "7C",
+    "top": 0.73,
+    "left": 0.2,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-D",
+    "label": "7D",
+    "top": 0.74,
+    "left": 0.315,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-E",
+    "label": "7E",
+    "top": 0.74,
+    "left": 0.38,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-F",
+    "label": "7F",
+    "top": 0.74,
+    "left": 0.445,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-G",
+    "label": "7G",
+    "top": 0.74,
+    "left": 0.51,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-A",
+    "label": "7A",
+    "top": 0.795,
+    "left": 0.18,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "MUSHOLA-BAWAH",
+    "label": "Mushola",
+    "top": 0.83,
+    "left": 0.11,
+    "width": 0.05,
+    "height": 0.03
+  },
+  {
+    "id": "R-KESENIAN",
+    "label": "Kesenian",
+    "top": 0.83,
+    "left": 0.18,
+    "width": 0.045,
+    "height": 0.03
+  },
+  {
+    "id": "R-GURU-BAWAH",
+    "label": "R. Guru",
+    "top": 0.835,
+    "left": 0.57,
+    "width": 0.045,
+    "height": 0.035
+  },
+  {
+    "id": "WC-BAWAH-KIRI",
+    "label": "WC",
+    "top": 0.85,
+    "left": 0.08,
+    "width": 0.02,
+    "height": 0.1
+  },
+  {
+    "id": "7-K",
+    "label": "7K",
+    "top": 0.885,
+    "left": 0.14,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-J",
+    "label": "7J",
+    "top": 0.885,
+    "left": 0.2,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "LAB-IPA-FISIKA",
+    "label": "Lab Fis",
+    "top": 0.885,
+    "left": 0.3,
+    "width": 0.08,
+    "height": 0.045
+  },
+  {
+    "id": "7-I",
+    "label": "7I",
+    "top": 0.885,
+    "left": 0.415,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "7-H",
+    "label": "7H",
+    "top": 0.885,
+    "left": 0.48,
+    "width": 0.05,
+    "height": 0.04
+  },
+  {
+    "id": "R-BTQ",
+    "label": "BTQ",
+    "top": 0.885,
+    "left": 0.57,
+    "width": 0.045,
+    "height": 0.04
+  },
+  {
+    "id": "WC-BAWAH-KANAN",
+    "label": "WC",
+    "top": 0.94,
+    "left": 0.57,
+    "width": 0.045,
+    "height": 0.015
+  },
+  {
+    "id": "KANTIN-BAWAH-1",
+    "label": "Kantin",
+    "top": 0.94,
+    "left": 0.33,
+    "width": 0.09,
+    "height": 0.015
+  },
+  {
+    "id": "KANTIN-BAWAH-2",
+    "label": "Kantin",
+    "top": 0.94,
+    "left": 0.44,
+    "width": 0.1,
+    "height": 0.015
+  }
+]

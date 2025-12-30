@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 15 (API 35) Edge-to-Edge Compliance -->
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <!-- Opt-out of legacy bar coloring enforcement -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">false</item> 
+    </style>
+</resources>

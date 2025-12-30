@@ -18,7 +18,7 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FD),
       body: Column(
         children: [
           CustomPageHeader(
@@ -29,96 +29,193 @@ class AboutPage extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 20),
-                  // App Logo
+                  const SizedBox(height: 16),
+                  
+                  // Main Info Card
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, 5)),
+                        BoxShadow(
+                          color: const Color(0xFF0D47A1).withOpacity(0.06),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                    child: Image.asset(
-                      'assets/logo smpn 1 cipanas.png',
-                      width: 100,
-                      height: 100,
-                      errorBuilder: (ctx, err, _) => const Icon(Icons.school, size: 80, color: Color(0xFF0D47A1)),
+                    child: Column(
+                      children: [
+                        // Logo
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE3F2FD).withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Image.asset(
+                            'assets/logo smpn 1 cipanas.png',
+                            width: 72,
+                            height: 72,
+                            errorBuilder: (ctx, err, _) => const Icon(Icons.school_rounded, size: 50, color: Color(0xFF0D47A1)),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // Title
+                        Text(
+                          'SATRIA',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 24, 
+                            fontWeight: FontWeight.w800, 
+                            color: const Color(0xFF1F2937),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        
+                        // Tagline
+                        Text(
+                          'Sistem Aplikasi Terpadu & Interaktif Siswa',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14, 
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF4B5563),
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        
+                        // Version Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE3F2FD),
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(color: const Color(0xFFBBDEFB)),
+                          ),
+                          child: Text(
+                            'Versi 1.2.2',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12, 
+                              fontWeight: FontWeight.w700, 
+                              color: const Color(0xFF0D47A1)
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+                        const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                        const SizedBox(height: 32),
+
+                        // Description Text
+                        Text(
+                          'SATRIA adalah platform digital resmi SMP Negeri 1 Cipanas yang dirancang untuk memudahkan aktivitas akademik siswa. Aplikasi ini mengintegrasikan presensi digital, jadwal pelajaran, informasi sekolah, dan pengelolaan tugas dalam satu genggaman.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14, 
+                            color: const Color(0xFF6B7280),
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  
                   const SizedBox(height: 24),
-                  Text(
-                    'SATRIA',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFF0D47A1)),
+                  
+                  // Developer & Contact Section
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0D47A1).withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Dikembangkan Oleh',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF9CA3AF),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Dery Supriady',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 16, 
+                            fontWeight: FontWeight.bold, 
+                            color: const Color(0xFF1F2937)
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                         Text(
+                          'Ikuti Kami',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF9CA3AF),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Social Icons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildSocialButton(
+                              icon: Icons.facebook,
+                              color: const Color(0xFF1877F2),
+                              onTap: () => _launchUrl('https://www.facebook.com/smpn1cipanas'),
+                            ),
+                            const SizedBox(width: 16),
+                            _buildSocialButton(
+                              icon: Icons.camera_alt,
+                              color: const Color(0xFFE4405F),
+                              onTap: () => _launchUrl('https://www.instagram.com/smpn1cipanas'),
+                            ),
+                            const SizedBox(width: 16),
+                            _buildSocialButton(
+                              icon: Icons.language,
+                              color: const Color(0xFF0D47A1),
+                              onTap: () => _launchUrl('https://smpn1cipanas.sch.id'),
+                            ),
+                            const SizedBox(width: 16),
+                            _buildSocialButton(
+                              icon: Icons.music_video, // TikTok placeholder
+                              color: Colors.black,
+                              onTap: () => _launchUrl('https://www.tiktok.com/@smpn1cipanas'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(
-                    'Sistem Aplikasi Terpadu & Interaktif Siswa',
+
+                  const SizedBox(height: 32),
+                   Text(
+                    '© ${DateTime.now().year} SMPN 1 Cipanas\nAll Rights Reserved',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[600]),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.grey[400]),
                   ),
-                   const SizedBox(height: 8),
-                  Text(
-                    'Versi 1.1.0',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                  
-                  const SizedBox(height: 40),
-                  const Divider(),
                   const SizedBox(height: 20),
-                  
-                  // Credits
-                  Text(
-                    'Dibuat oleh:',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Dery Supriady',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
-                  ),
-                  
-                  const SizedBox(height: 40),
-                  
-                  // Social Media
-                  Text(
-                    'Ikuti SMPN 1 Cipanas:',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildSocialButton(
-                        icon: Icons.facebook,
-                        color: const Color(0xFF1877F2),
-                        label: 'Facebook',
-                        onTap: () => _launchUrl('https://www.facebook.com/smpn1cipanas'),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildSocialButton(
-                        icon: Icons.camera_alt,
-                        color: const Color(0xFFE4405F),
-                        label: 'Instagram',
-                        onTap: () => _launchUrl('https://www.instagram.com/smpn1cipanas'),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildSocialButton(
-                        icon: Icons.language,
-                        color: Colors.blueAccent,
-                        label: 'Website',
-                        onTap: () => _launchUrl('https://smpn1cipanas.sch.id'),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 40),
-                  Text(
-                    '© ${DateTime.now().year} SMPN 1 Cipanas',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[400]),
-                  ),
                 ],
               ),
             ),
@@ -128,24 +225,18 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSocialButton({required IconData icon, required Color color, required String label, required VoidCallback onTap}) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(50),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 30),
-          ),
+  Widget _buildSocialButton({required IconData icon, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
         ),
-        const SizedBox(height: 8),
-        Text(label, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: Colors.grey[700])),
-      ],
+        child: Icon(icon, color: color, size: 24),
+      ),
     );
   }
 }

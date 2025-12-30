@@ -22,6 +22,9 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
   List<Jadwal> _allJadwal = [];
   bool _isLoading = true;
   
+  // Semester filter
+  String _selectedSemester = 'ganjil';
+  
   // Define days for Tabs
   final List<String> _days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
@@ -29,6 +32,7 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: _days.length, vsync: this);
+    _loadActiveSemester();
     _loadJadwal();
     _selectTodayTab();
   }
@@ -39,6 +43,16 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
     int weekday = DateTime.now().weekday;
     if (weekday >= 1 && weekday <= 6) {
       _tabController.index = weekday - 1; // 0-indexed
+    }
+  }
+
+  Future<void> _loadActiveSemester() async {
+    final data = await _jadwalService.getActiveSemester();
+    if (mounted && data != null) {
+      final semester = data['semester']?.toString().toLowerCase() ?? 'ganjil';
+      setState(() {
+        _selectedSemester = semester;
+      });
     }
   }
 
@@ -66,6 +80,52 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
           title: 'Jadwal Pelajaran',
           showBackButton: false,
           leadingIcon: Icons.calendar_month,
+          actions: [
+            // Semester Filter Button
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                child: InkWell(
+                  onTap: () => _showSemesterFilter(context),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF0D47A1).withOpacity(0.2)),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined, 
+                          size: 14, 
+                          color: const Color(0xFF0D47A1)
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _selectedSemester == 'ganjil' ? 'Ganjil' : 'Genap',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: const Color(0xFF0D47A1),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.keyboard_arrow_down_rounded, 
+                          size: 16, 
+                          color: Color(0xFF0D47A1)
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          ],
         ),
         
         // Tab Bar
@@ -135,8 +195,11 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
   }
 
   Widget _buildDaySchedule(String day) {
-    // Filter jadwal for this day
-    final daySchedule = _allJadwal.where((j) => j.hari.toLowerCase() == day.toLowerCase()).toList();
+    // Filter jadwal for this day AND semester
+    final daySchedule = _allJadwal.where((j) => 
+      j.hari.toLowerCase() == day.toLowerCase() && 
+      j.semester.toLowerCase() == _selectedSemester.toLowerCase()
+    ).toList();
 
     // Sort by jam_ke
     daySchedule.sort((a, b) => a.jamKe.compareTo(b.jamKe));
@@ -358,5 +421,101 @@ class _JadwalPageState extends State<JadwalPage> with SingleTickerProviderStateM
       Colors.teal,
     ];
     return colors[subject.length % colors.length];
+  }
+
+  void _showSemesterFilter(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, 
+                height: 4, 
+                decoration: BoxDecoration(
+                  color: Colors.grey[300], 
+                  borderRadius: BorderRadius.circular(2)
+                )
+              )
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Pilih Semester',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildSemesterOption(
+              label: 'Semester Ganjil',
+              value: 'ganjil',
+              isSelected: _selectedSemester == 'ganjil',
+            ),
+            const SizedBox(height: 12),
+            _buildSemesterOption(
+              label: 'Semester Genap',
+              value: 'genap',
+              isSelected: _selectedSemester == 'genap',
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSemesterOption({
+    required String label, 
+    required String value, 
+    required bool isSelected
+  }) {
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedSemester = value);
+        Navigator.pop(context);
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
+          border: Border.all(
+            color: isSelected ? const Color(0xFF0D47A1) : Colors.grey[300]!
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: isSelected ? const Color(0xFF0D47A1) : Colors.grey,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: isSelected ? const Color(0xFF0D47A1) : Colors.black87,
+              ),
+            ),
+            if (isSelected) ...[
+              const Spacer(),
+              const Icon(Icons.check, color: Color(0xFF0D47A1), size: 18),
+            ]
+          ],
+        ),
+      ),
+    );
   }
 }

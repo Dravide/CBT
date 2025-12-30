@@ -68,7 +68,9 @@ class _InfoPageState extends State<InfoPage> {
         }
       });
     } catch (e) {
-      showTopSnackBar(context, 'Error loading announcements: $e', backgroundColor: Colors.red);
+      if (mounted) {
+        showTopSnackBar(context, 'Error loading announcements: $e', backgroundColor: Colors.red);
+      }
     } finally {
       if (mounted) {
         setState(() {

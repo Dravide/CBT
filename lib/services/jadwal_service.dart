@@ -42,4 +42,21 @@ class JadwalService {
 
   // Helper to filter valid days
   static const List<String> validDays = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+  // Fetch active semester from API
+  Future<Map<String, dynamic>?> getActiveSemester() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/tahun-pelajaran/active'));
+      
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        if (jsonResponse['success'] == true && jsonResponse['data'] != null) {
+          return jsonResponse['data'];
+        }
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

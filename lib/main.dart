@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cbt_app/splash_screen.dart';
 import 'package:intl/date_symbol_data_local.dart'; 
+import 'package:cbt_app/services/local_notification_service.dart';
 // import 'package:cbt_app/services/fcm_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -22,16 +23,27 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null); // Initialize 'id_ID' locale
+  await LocalNotificationService().initialize(); // Initialize local notifications
   // await Firebase.initializeApp(); // Disabled as requested
   // FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   
-  // Set fullscreen
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  // Lock orientation
-  SystemChrome.setPreferredOrientations([
+  // Fixed orientation removed for Android 16+ Large Screen support
+  /* SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
-  ]);
+  ]); */
+
+  // Android 15 Edge-to-Edge Compliance
+  // Use edgeToEdge instead of immersiveSticky globally.
+  // We will enable immersiveSticky only on specific exam pages if needed.
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
+    systemNavigationBarDividerColor: Colors.transparent,
+  ));
 
   runApp(const MyApp());
 }
